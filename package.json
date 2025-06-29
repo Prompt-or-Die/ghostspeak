@@ -1,0 +1,66 @@
+{
+  "name": "podAI-core",
+  "version": "1.0.0",
+  "description": "Core podAI Protocol - AI Agent Communication Protocol on Solana",
+  "type": "module",
+  "preferredPackageManager": "bun",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run build:rust && bun run build:ts",
+    "build:rust": "cd packages/core && cargo build",
+    "build:ts": "cd packages/sdk-typescript && bun run build",
+    "build:release": "cd packages/core && cargo build --release && cd ../sdk-typescript && bun run build:prod",
+    "test": "bun run test:rust && bun run test:ts",
+    "test:rust": "cd packages/core && cargo test",
+    "test:ts": "cd packages/sdk-typescript && bun test",
+    "test:integration": "bun test tests/",
+    "test:watch": "bun test --watch",
+    "lint": "bun run lint:rust && bun run lint:ts",
+    "lint:rust": "cd packages/core && cargo clippy",
+    "lint:ts": "cd packages/sdk-typescript && bun run lint",
+    "format": "bun run format:rust && bun run format:ts",
+    "format:rust": "cd packages/core && cargo fmt",
+    "format:ts": "cd packages/sdk-typescript && bun run format",
+    "clean": "bun run clean:rust && bun run clean:ts",
+    "clean:rust": "cd packages/core && cargo clean",
+    "clean:ts": "cd packages/sdk-typescript && bun run clean",
+    "dev": "bun run build:ts --watch",
+    "docs": "cd packages/sdk-typescript && bun run docs",
+    "validate": "bun run lint && bun run test",
+    "fresh": "bun run clean && bun install && bun run build",
+    "publish:sdk": "cd packages/sdk-typescript && npm publish",
+    "security": "bun audit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "^3.6.1",
+    "rimraf": "^6.0.1"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "keywords": [
+    "solana",
+    "web3",
+    "ai-agents",
+    "protocol",
+    "blockchain",
+    "podAI",
+    "podAIprotocol",
+    "rust",
+    "typescript"
+  ],
+  "author": "podAI Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Prompt-or-Die/ghostspeak.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Prompt-or-Die/ghostspeak/issues"
+  },
+  "homepage": "https://github.com/Prompt-or-Die/ghostspeak#readme"
+} 

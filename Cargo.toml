@@ -1,0 +1,27 @@
+[workspace]
+members = [
+    "packages/core",
+    "packages/sdk-rust",
+]
+resolver = "2"
+
+[workspace.dependencies]
+anchor-lang = { version = "0.31.1", default-features = false, features = ["init-if-needed"] }
+anchor-spl = "0.31.1"
+spl-account-compression = { version = "1.0.0", features = ["cpi"], default-features = false }
+solana-program = "2.3.0"
+blake3 = "1.5.0"
+tokio = { version = "1.45.1", features = ["full"] }
+serde = { version = "1.0.219", features = ["derive"] }
+thiserror = "2.0.12"
+anyhow = "1.0.98"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+[profile.release.build-override]
+opt-level = 3
+codegen-units = 1 
