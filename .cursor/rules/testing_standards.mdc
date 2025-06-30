@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Testing Standards - Pod Protocol Core
 
 ## Testing Strategy

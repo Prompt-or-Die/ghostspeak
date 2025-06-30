@@ -2,12 +2,13 @@
 #![allow(unexpected_cfgs, deprecated)]
 
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::clock::Clock;
 use anchor_lang::solana_program::pubkey::Pubkey;
+use anchor_lang::solana_program::sysvar::Sysvar;
+use anchor_lang::{error_code, event};
 
 // Native Solana State Compression imports - 2025 approach
-use spl_account_compression::{
-    program::SplAccountCompression,
-};
+use spl_account_compression::program::SplAccountCompression;
 
 // Cryptographic operations - native Solana compatible
 use blake3;
@@ -30,40 +31,44 @@ impl SecureBuffer {
         if size == 0 {
             return Err(PodComError::SecureMemoryAllocationFailed.into());
         }
-        
+
         // Prevent excessive memory allocation that could cause DoS
         const MAX_SECURE_BUFFER_SIZE: usize = 64 * 1024; // 64KB limit
         if size > MAX_SECURE_BUFFER_SIZE {
             return Err(PodComError::SecureMemoryAllocationFailed.into());
         }
-        
+
         // Initialize with secure zero pattern
         let mut data = vec![0u8; size];
-        
+
         // Use Solana's secure memory operations if available
         use anchor_lang::solana_program::program_memory::sol_memset;
         sol_memset(&mut data, 0, size);
-        
+
         Ok(SecureBuffer { data })
     }
-    
+
     /// Get mutable slice to secure memory
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
         &mut self.data
     }
-    
+
     /// Get immutable slice to secure memory
     pub fn as_slice(&self) -> &[u8] {
         &self.data
     }
-    
+
     /// Securely compare two buffers in constant time
     pub fn secure_compare(&self, other: &[u8]) -> bool {
         if self.data.len() != other.len() {
             return false;
         }
         // Use constant-time comparison
-        self.data.iter().zip(other.iter()).fold(0u8, |acc, (a, b)| acc | (a ^ b)) == 0
+        self.data
+            .iter()
+            .zip(other.iter())
+            .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+            == 0
     }
 }
 
@@ -74,7 +79,7 @@ impl Drop for SecureBuffer {
             // Use safe rust patterns for memory clearing
             let len = self.data.len();
             self.data.iter_mut().for_each(|byte| *byte = 0);
-            
+
             // Additional security: overwrite with random then zero again
             use anchor_lang::solana_program::program_memory::sol_memset;
             sol_memset(&mut self.data, 0, len);
@@ -86,11 +91,11 @@ impl Drop for SecureBuffer {
 pub fn secure_hash_data(data: &[u8]) -> Result<[u8; 32]> {
     // Use secure buffer for intermediate hash computations
     let mut secure_buf = SecureBuffer::new(data.len())?;
-    
+
     // Copy data to secure memory
     let secure_slice = secure_buf.as_mut_slice();
     secure_slice.copy_from_slice(data);
-    
+
     // Perform hash computation using native Solana-compatible Blake3
     let hash = blake3::hash(secure_slice);
     Ok(*hash.as_bytes())
@@ -176,6 +181,57 @@ const CHANNEL_MESSAGE_SPACE: usize =
     8 + 32 + 32 + 33 + 8 + 9 + (4 + MAX_MESSAGE_CONTENT_LENGTH) + 1 + 1 + 6; // 1134 bytes (optimized layout)
 const ESCROW_ACCOUNT_SPACE: usize = 8 + 32 + 32 + 8 + 8 + 1 + 7; // 96 bytes (already optimal)
 
+// =============================================================================
+// DYNAMIC PRODUCT MINTING - ACCOUNT SPACE CONSTANTS (NEW 2025 FEATURE)
+// =============================================================================
+const PRODUCT_REQUEST_SPACE: usize = 8
+    + 32 // requester (agent PDA)
+    + 32 // target_agent (service provider)
+    + 8  // request_type (enum)
+    + (4 + 500) // requirements_description
+    + 8  // offered_payment
+    + 8  // deadline
+    + 8  // created_at
+    + 1  // status
+    + 32 // escrow_account (optional)
+    + 1  // bump
+    + 7; // _reserved - 641 bytes
+
+const DATA_PRODUCT_SPACE: usize = 8
+    + 32 // creator (agent PDA)
+    + 32 // request_id (links to original request)
+    + 8  // product_type (enum)
+    + (4 + 200) // title
+    + (4 + 500) // description
+    + 32 // content_hash (Blake3 hash)
+    + (4 + 100) // ipfs_cid
+    + 8  // price
+    + 8  // royalty_percentage (basis points, max 10000 = 100%)
+    + 8  // created_at
+    + 8  // updated_at
+    + 4  // total_sales
+    + 8  // total_revenue
+    + 1  // is_active
+    + 1  // bump
+    + 7; // _reserved - 870 bytes
+
+const CAPABILITY_SERVICE_SPACE: usize = 8
+    + 32 // provider (agent PDA)
+    + 8  // service_type (enum)
+    + (4 + 200) // service_name
+    + (4 + 500) // service_description
+    + 8  // base_price
+    + 8  // estimated_completion_time (seconds)
+    + 4  // max_concurrent_requests
+    + 4  // current_active_requests
+    + 8  // total_completed
+    + 8  // average_rating (scaled by 1000)
+    + 8  // total_revenue
+    + 1  // is_available
+    + 1  // requires_escrow
+    + 1  // bump
+    + 7; // _reserved - 810 bytes
+
 // Error codes
 #[error_code]
 pub enum PodComError {
@@ -215,6 +271,36 @@ pub enum PodComError {
     InvalidTimestamp,
     #[msg("Invalid message hash")]
     InvalidMessageHash,
+
+    // Dynamic Product Minting Error Codes
+    #[msg("Invalid product request type")]
+    InvalidProductRequestType,
+    #[msg("Product request expired")]
+    ProductRequestExpired,
+    #[msg("Insufficient payment for request")]
+    InsufficientPaymentForRequest,
+    #[msg("Product already exists for this request")]
+    ProductAlreadyExists,
+    #[msg("Invalid product type")]
+    InvalidProductType,
+    #[msg("Product not found")]
+    ProductNotFound,
+    #[msg("Invalid royalty percentage")]
+    InvalidRoyaltyPercentage,
+    #[msg("Service not available")]
+    ServiceNotAvailable,
+    #[msg("Service at capacity")]
+    ServiceAtCapacity,
+    #[msg("Invalid service type")]
+    InvalidServiceType,
+    #[msg("Escrow required for this service")]
+    EscrowRequiredForService,
+    #[msg("Product price cannot be zero")]
+    ProductPriceCannotBeZero,
+    #[msg("Invalid IPFS CID format")]
+    InvalidIpfsCidFormat,
+    #[msg("Agent not authorized to provide this service")]
+    AgentNotAuthorizedForService,
 }
 
 // Message types
@@ -241,6 +327,92 @@ pub enum MessageStatus {
 pub enum ChannelVisibility {
     Public,
     Private,
+}
+
+// =============================================================================
+// DYNAMIC PRODUCT MINTING - ENUMS (NEW 2025 FEATURE)
+// =============================================================================
+
+/// Types of product requests agents can make
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ProductRequestType {
+    /// Request for data analysis or insights
+    DataAnalysis = 0,
+    /// Request for trading signals or strategies
+    TradingSignals = 1,
+    /// Request for custom computation or algorithms
+    Computation = 2,
+    /// Request for AI model training or inference
+    AiService = 3,
+    /// Request for content creation (text, images, etc.)
+    ContentCreation = 4,
+    /// Request for research and information gathering
+    Research = 5,
+    /// Request for automated task execution
+    Automation = 6,
+    /// Custom service type defined by provider
+    Custom = 7,
+}
+
+/// Status of a product request
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ProductRequestStatus {
+    /// Request created, awaiting agent acceptance
+    Pending = 0,
+    /// Agent has accepted and is working on request
+    InProgress = 1,
+    /// Work completed, product minted
+    Completed = 2,
+    /// Request cancelled before completion
+    Cancelled = 3,
+    /// Request expired without fulfillment
+    Expired = 4,
+    /// Dispute raised, requires resolution
+    Disputed = 5,
+}
+
+/// Types of data products that can be minted
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DataProductType {
+    /// Market analysis and insights
+    MarketAnalysis = 0,
+    /// Trading strategies and signals
+    TradingStrategy = 1,
+    /// Research reports and findings
+    ResearchReport = 2,
+    /// Trained AI models or algorithms
+    AiModel = 3,
+    /// Dataset or processed data
+    Dataset = 4,
+    /// Software tools or scripts
+    Software = 5,
+    /// Educational content or tutorials
+    Educational = 6,
+    /// Creative content (art, music, text)
+    Creative = 7,
+    /// Custom data product type
+    Custom = 8,
+}
+
+/// Types of capability services agents can offer
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CapabilityServiceType {
+    /// Real-time data analysis service
+    DataAnalysis = 0,
+    /// Trading and financial services
+    Trading = 1,
+    /// AI inference and model services
+    AiInference = 2,
+    /// Content generation services
+    ContentGeneration = 3,
+    /// Research and information services
+    Research = 4,
+    /// Automation and task execution
+    Automation = 5,
+    /// Consulting and advisory services
+    Consulting = 6,
+    /// Custom capability service
+    Custom = 7,
 }
 
 // Program Events for monitoring and indexing
@@ -309,25 +481,87 @@ pub struct CompressedMessageSynced {
     pub sync_timestamp: i64,
 }
 
+// =============================================================================
+// DYNAMIC PRODUCT MINTING - EVENTS (NEW 2025 FEATURE)
+// =============================================================================
+
+#[event]
+pub struct ProductRequestCreated {
+    pub request_id: Pubkey,
+    pub requester: Pubkey,
+    pub target_agent: Pubkey,
+    pub request_type: ProductRequestType,
+    pub offered_payment: u64,
+    pub deadline: i64,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct ProductRequestAccepted {
+    pub request_id: Pubkey,
+    pub provider: Pubkey,
+    pub estimated_completion: i64,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct DataProductMinted {
+    pub product_id: Pubkey,
+    pub creator: Pubkey,
+    pub request_id: Option<Pubkey>,
+    pub product_type: DataProductType,
+    pub price: u64,
+    pub royalty_percentage: u16,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct ProductPurchased {
+    pub product_id: Pubkey,
+    pub buyer: Pubkey,
+    pub seller: Pubkey,
+    pub price: u64,
+    pub royalty_paid: u64,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct CapabilityServiceRegistered {
+    pub service_id: Pubkey,
+    pub provider: Pubkey,
+    pub service_type: CapabilityServiceType,
+    pub base_price: u64,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct ServiceRatingUpdated {
+    pub service_id: Pubkey,
+    pub provider: Pubkey,
+    pub new_average_rating: u32,
+    pub total_ratings: u64,
+    pub timestamp: i64,
+}
+
 // Channel account structure with optimized memory layout (PERF-02)
 #[account]
 #[repr(C)]
 pub struct ChannelAccount {
-    pub creator: Pubkey,               // 32 bytes
-    pub fee_per_message: u64,          // 8 bytes (lamports)
-    pub escrow_balance: u64,           // 8 bytes (lamports)
-    pub created_at: i64,               // 8 bytes
-    pub max_participants: u32,         // 4 bytes
-    pub current_participants: u32,     // 4 bytes
-    pub name: String,                  // 4 + 50 bytes (max 50 chars)
-    pub description: String,           // 4 + 200 bytes (max 200 chars)
-    pub visibility: ChannelVisibility, // 1 byte
-    pub is_active: bool,               // 1 byte
-    pub last_sync_timestamp: i64,      // 8 bytes - Last batch sync timestamp
+    pub creator: Pubkey,                // 32 bytes
+    pub fee_per_message: u64,           // 8 bytes (lamports)
+    pub escrow_balance: u64,            // 8 bytes (lamports)
+    pub created_at: i64,                // 8 bytes
+    pub max_participants: u32,          // 4 bytes
+    pub current_participants: u32,      // 4 bytes
+    pub name: String,                   // 4 + 50 bytes (max 50 chars)
+    pub description: String,            // 4 + 200 bytes (max 200 chars)
+    pub visibility: ChannelVisibility,  // 1 byte
+    pub is_active: bool,                // 1 byte
+    pub last_sync_timestamp: i64,       // 8 bytes - Last batch sync timestamp
     pub total_compressed_messages: u64, // 8 bytes - Total compressed messages
-    pub compressed_data_size: u64,     // 8 bytes - Total compressed data size
-    pub bump: u8,                      // 1 byte
-    _reserved: [u8; 5],                // 5 bytes (padding for alignment)
+    pub compressed_data_size: u64,      // 8 bytes - Total compressed data size
+    pub bump: u8,                       // 1 byte
+    _reserved: [u8; 5],                 // 5 bytes (padding for alignment)
 }
 
 // Channel participant account structure with optimized memory layout (PERF-02)
@@ -350,17 +584,17 @@ pub struct ChannelParticipant {
 #[account]
 #[repr(C)]
 pub struct ChannelInvitation {
-    pub channel: Pubkey,            // 32 bytes
-    pub inviter: Pubkey,            // 32 bytes
-    pub invitee: Pubkey,            // 32 bytes
-    pub invitation_hash: [u8; 32],  // 32 bytes - Cryptographic verification hash
-    pub created_at: i64,            // 8 bytes
-    pub expires_at: i64,            // 8 bytes
-    pub nonce: u64,                 // 8 bytes - Prevent replay attacks
-    pub is_accepted: bool,          // 1 byte
-    pub is_used: bool,              // 1 byte - Single-use enforcement
-    pub bump: u8,                   // 1 byte
-    _reserved: [u8; 5],             // 5 bytes (padding for alignment)
+    pub channel: Pubkey,           // 32 bytes
+    pub inviter: Pubkey,           // 32 bytes
+    pub invitee: Pubkey,           // 32 bytes
+    pub invitation_hash: [u8; 32], // 32 bytes - Cryptographic verification hash
+    pub created_at: i64,           // 8 bytes
+    pub expires_at: i64,           // 8 bytes
+    pub nonce: u64,                // 8 bytes - Prevent replay attacks
+    pub is_accepted: bool,         // 1 byte
+    pub is_used: bool,             // 1 byte - Single-use enforcement
+    pub bump: u8,                  // 1 byte
+    _reserved: [u8; 5],            // 5 bytes (padding for alignment)
 }
 
 // Channel message account structure (for broadcast messages)
@@ -422,6 +656,70 @@ pub struct MessageAccount {
 }
 
 // =============================================================================
+// DYNAMIC PRODUCT MINTING - ACCOUNT STRUCTURES (NEW 2025 FEATURE)
+// =============================================================================
+
+/// Product request account - represents a request for service/product from an agent
+#[account]
+#[repr(C)]
+pub struct ProductRequestAccount {
+    pub requester: Pubkey,                // 32 bytes - Agent making the request
+    pub target_agent: Pubkey,             // 32 bytes - Agent who can fulfill request
+    pub request_type: ProductRequestType, // 8 bytes - Type of product/service requested
+    pub requirements_description: String, // 4 + 500 bytes - Detailed requirements
+    pub offered_payment: u64,             // 8 bytes - Payment offered (lamports)
+    pub deadline: i64,                    // 8 bytes - Unix timestamp deadline
+    pub created_at: i64,                  // 8 bytes - Creation timestamp
+    pub status: ProductRequestStatus,     // 1 byte - Current status
+    pub escrow_account: Option<Pubkey>,   // 33 bytes - Optional escrow account
+    pub bump: u8,                         // 1 byte
+    _reserved: [u8; 7],                   // 7 bytes - Reserved for future use
+}
+
+/// Data product account - represents a minted product NFT with content and metadata
+#[account]
+#[repr(C)]
+pub struct DataProductAccount {
+    pub creator: Pubkey,               // 32 bytes - Agent who created the product
+    pub request_id: Option<Pubkey>,    // 33 bytes - Optional link to original request
+    pub product_type: DataProductType, // 8 bytes - Type of data product
+    pub title: String,                 // 4 + 200 bytes - Product title
+    pub description: String,           // 4 + 500 bytes - Product description
+    pub content_hash: [u8; 32],        // 32 bytes - Blake3 hash of content
+    pub ipfs_cid: String,              // 4 + 100 bytes - IPFS content identifier
+    pub price: u64,                    // 8 bytes - Current price (lamports)
+    pub royalty_percentage: u16,       // 2 bytes - Royalty % (basis points, max 10000)
+    pub created_at: i64,               // 8 bytes - Creation timestamp
+    pub updated_at: i64,               // 8 bytes - Last update timestamp
+    pub total_sales: u32,              // 4 bytes - Total number of sales
+    pub total_revenue: u64,            // 8 bytes - Total revenue generated
+    pub is_active: bool,               // 1 byte - Whether product is available
+    pub bump: u8,                      // 1 byte
+    _reserved: [u8; 7],                // 7 bytes - Reserved for future use
+}
+
+/// Capability service account - represents a service offering from an agent
+#[account]
+#[repr(C)]
+pub struct CapabilityServiceAccount {
+    pub provider: Pubkey, // 32 bytes - Agent providing the service
+    pub service_type: CapabilityServiceType, // 8 bytes - Type of capability service
+    pub service_name: String, // 4 + 200 bytes - Name of the service
+    pub service_description: String, // 4 + 500 bytes - Detailed service description
+    pub base_price: u64,  // 8 bytes - Base price for service (lamports)
+    pub estimated_completion_time: u64, // 8 bytes - Estimated completion time (seconds)
+    pub max_concurrent_requests: u32, // 4 bytes - Maximum concurrent requests
+    pub current_active_requests: u32, // 4 bytes - Current active requests
+    pub total_completed: u64, // 8 bytes - Total completed requests
+    pub average_rating: u32, // 4 bytes - Average rating (scaled by 1000)
+    pub total_revenue: u64, // 8 bytes - Total revenue from service
+    pub is_available: bool, // 1 byte - Whether service is available
+    pub requires_escrow: bool, // 1 byte - Whether escrow is required
+    pub bump: u8,         // 1 byte
+    _reserved: [u8; 7],   // 7 bytes - Reserved for future use
+}
+
+// =============================================================================
 // ZK COMPRESSED ACCOUNT STRUCTURES
 // =============================================================================
 
@@ -443,36 +741,41 @@ impl CompressedChannelMessage {
     pub fn hash(&self) -> std::result::Result<[u8; 32], PodComError> {
         // Calculate required buffer size
         let mut size = 32 + 32 + 32 + self.ipfs_hash.len() + 1 + 8; // base fields
-        if self.edited_at.is_some() { size += 8; }
-        if self.reply_to.is_some() { size += 32; }
-        
+        if self.edited_at.is_some() {
+            size += 8;
+        }
+        if self.reply_to.is_some() {
+            size += 32;
+        }
+
         // Validate size before allocation to prevent excessive memory usage
-        if size > 1024 * 1024 { // 1MB limit
+        if size > 1024 * 1024 {
+            // 1MB limit
             return Err(PodComError::SecureMemoryAllocationFailed);
         }
         if size == 0 {
             return Err(PodComError::InvalidMessageHash);
         }
-        
+
         // Use secure memory for sensitive hash computation
-        let mut secure_buf = SecureBuffer::new(size)
-            .map_err(|_| PodComError::SecureMemoryAllocationFailed)?;
-        
+        let mut secure_buf =
+            SecureBuffer::new(size).map_err(|_| PodComError::SecureMemoryAllocationFailed)?;
+
         let data = secure_buf.as_mut_slice();
         let mut offset = 0;
-        
+
         // Pack data into secure buffer
-        data[offset..offset+32].copy_from_slice(&self.channel.to_bytes());
+        data[offset..offset + 32].copy_from_slice(&self.channel.to_bytes());
         offset += 32;
-        data[offset..offset+32].copy_from_slice(&self.sender.to_bytes());
+        data[offset..offset + 32].copy_from_slice(&self.sender.to_bytes());
         offset += 32;
-        data[offset..offset+32].copy_from_slice(&self.content_hash);
+        data[offset..offset + 32].copy_from_slice(&self.content_hash);
         offset += 32;
-        
+
         let ipfs_bytes = self.ipfs_hash.as_bytes();
-        data[offset..offset+ipfs_bytes.len()].copy_from_slice(ipfs_bytes);
+        data[offset..offset + ipfs_bytes.len()].copy_from_slice(ipfs_bytes);
         offset += ipfs_bytes.len();
-        
+
         // Convert MessageType to u8 manually
         let msg_type_byte = match self.message_type {
             MessageType::Text => 0u8,
@@ -483,18 +786,18 @@ impl CompressedChannelMessage {
         };
         data[offset] = msg_type_byte;
         offset += 1;
-        
-        data[offset..offset+8].copy_from_slice(&self.created_at.to_le_bytes());
+
+        data[offset..offset + 8].copy_from_slice(&self.created_at.to_le_bytes());
         offset += 8;
-        
+
         if let Some(edited) = self.edited_at {
-            data[offset..offset+8].copy_from_slice(&edited.to_le_bytes());
+            data[offset..offset + 8].copy_from_slice(&edited.to_le_bytes());
             offset += 8;
         }
         if let Some(reply_to) = self.reply_to {
-            data[offset..offset+32].copy_from_slice(&reply_to.to_bytes());
+            data[offset..offset + 32].copy_from_slice(&reply_to.to_bytes());
         }
-        
+
         // Perform hash computation on secure data using Blake3
         Ok(*blake3::hash(&data[..offset]).as_bytes())
     }
@@ -516,29 +819,29 @@ impl CompressedChannelParticipant {
     pub fn hash(&self) -> std::result::Result<[u8; 32], PodComError> {
         // Fixed size buffer for participant data: 32+32+8+8+8+32 = 120 bytes
         const BUFFER_SIZE: usize = 120;
-        
+
         // Use secure memory for sensitive hash computation
         let mut secure_buf = SecureBuffer::new(BUFFER_SIZE)
             .map_err(|_| PodComError::SecureMemoryAllocationFailed)?;
-        
+
         let data = secure_buf.as_mut_slice();
         let mut offset = 0;
-        
+
         // Pack data into secure buffer
-        data[offset..offset+32].copy_from_slice(&self.channel.to_bytes());
+        data[offset..offset + 32].copy_from_slice(&self.channel.to_bytes());
         offset += 32;
-        data[offset..offset+32].copy_from_slice(&self.participant.to_bytes());
+        data[offset..offset + 32].copy_from_slice(&self.participant.to_bytes());
         offset += 32;
-        data[offset..offset+8].copy_from_slice(&self.joined_at.to_le_bytes());
+        data[offset..offset + 8].copy_from_slice(&self.joined_at.to_le_bytes());
         offset += 8;
-        data[offset..offset+8].copy_from_slice(&self.messages_sent.to_le_bytes());
+        data[offset..offset + 8].copy_from_slice(&self.messages_sent.to_le_bytes());
         offset += 8;
-        data[offset..offset+8].copy_from_slice(&self.last_message_at.to_le_bytes());
+        data[offset..offset + 8].copy_from_slice(&self.last_message_at.to_le_bytes());
         offset += 8;
-        data[offset..offset+32].copy_from_slice(&self.metadata_hash);
-        
+        data[offset..offset + 32].copy_from_slice(&self.metadata_hash);
+
         // Perform hash computation on secure data using Blake3
-            Ok(*blake3::hash(data).as_bytes())
+        Ok(*blake3::hash(data).as_bytes())
     }
 }
 
@@ -548,7 +851,7 @@ fn is_valid_metadata_uri(uri: &str) -> bool {
     if !uri.starts_with("https://") && !uri.starts_with("http://") {
         return false;
     }
-    
+
     // Prevent dangerous schemes and characters
     let dangerous_patterns = [
         "javascript:",
@@ -563,26 +866,26 @@ fn is_valid_metadata_uri(uri: &str) -> bool {
         "onload",
         "onclick",
     ];
-    
+
     let uri_lower = uri.to_lowercase();
     for pattern in &dangerous_patterns {
         if uri_lower.contains(pattern) {
             return false;
         }
     }
-    
+
     // Additional character validation
     for ch in uri.chars() {
         if ch.is_control() && ch != '\t' {
             return false;
         }
     }
-    
+
     // Basic URL format validation
     if uri.contains("..") || (uri.contains("//") && !uri.starts_with("http")) {
         return false;
     }
-    
+
     true
 }
 
@@ -594,7 +897,7 @@ fn is_valid_message_content(content: &str) -> bool {
             return false;
         }
     }
-    
+
     // Check for dangerous patterns that could be used in attacks
     let dangerous_patterns = [
         "javascript:",
@@ -612,19 +915,19 @@ fn is_valid_message_content(content: &str) -> bool {
         "setTimeout(",
         "setInterval(",
     ];
-    
+
     let content_lower = content.to_lowercase();
     for pattern in &dangerous_patterns {
         if content_lower.contains(pattern) {
             return false;
         }
     }
-    
+
     // Check for excessive repetition (potential spam/DoS)
     if has_excessive_repetition(content) {
         return false;
     }
-    
+
     // Check for SQL injection patterns
     let sql_patterns = [
         "drop table",
@@ -637,13 +940,13 @@ fn is_valid_message_content(content: &str) -> bool {
         "/*",
         "*/",
     ];
-    
+
     for pattern in &sql_patterns {
         if content_lower.contains(pattern) {
             return false;
         }
     }
-    
+
     true
 }
 
@@ -652,16 +955,16 @@ fn has_excessive_repetition(content: &str) -> bool {
     if content.len() < 10 {
         return false;
     }
-    
+
     // Check for repeated characters (more than 50% of content)
     let mut char_counts = std::collections::HashMap::new();
     for ch in content.chars() {
         *char_counts.entry(ch).or_insert(0) += 1;
     }
-    
+
     let max_count = char_counts.values().max().unwrap_or(&0);
     let threshold = content.len() / 2;
-    
+
     *max_count > threshold
 }
 
@@ -692,34 +995,36 @@ pub mod pod_com {
         metadata_uri: String,
     ) -> Result<()> {
         // SECURITY: Comprehensive input validation
-        
+
         // Validate metadata_uri format and content
         if metadata_uri.trim().is_empty() {
             return Err(PodComError::InvalidMetadataUriLength.into());
         }
-        
+
         // Enforce strict length limits
         if metadata_uri.len() > MAX_METADATA_URI_LENGTH {
             return Err(PodComError::InvalidMetadataUriLength.into());
         }
-        
+
         // Additional security validations
-        if metadata_uri.len() < 10 { // Minimum reasonable URL length
+        if metadata_uri.len() < 10 {
+            // Minimum reasonable URL length
             return Err(PodComError::InvalidMetadataUriLength.into());
         }
-        
+
         // Validate URL format and prevent dangerous schemes
         if !super::is_valid_metadata_uri(&metadata_uri) {
             return Err(PodComError::InvalidMetadataUriLength.into());
         }
-        
+
         // Capabilities validation - prevent overflow and unreasonable values
         if capabilities > u64::MAX / 2 {
             return Err(PodComError::Unauthorized.into());
         }
-        
+
         // Check for null bytes and other dangerous characters
-        if metadata_uri.contains('\0') || metadata_uri.contains('\r') || metadata_uri.contains('\n') {
+        if metadata_uri.contains('\0') || metadata_uri.contains('\r') || metadata_uri.contains('\n')
+        {
             return Err(PodComError::InvalidMetadataUriLength.into());
         }
 
@@ -1008,40 +1313,56 @@ pub mod pod_com {
         // SECURITY FIX (HIGH-01): Enhanced atomic payment verification for premium channels
         if channel.fee_per_message > 0 {
             // Require escrow account for premium channels
-            let escrow = ctx.accounts.escrow_account
+            let escrow = ctx
+                .accounts
+                .escrow_account
                 .as_ref()
                 .ok_or(PodComError::InsufficientFunds)?;
-            
+
             // Verify escrow ownership and PDA derivation for security
             if escrow.depositor != ctx.accounts.user.key() {
                 return Err(PodComError::Unauthorized.into());
             }
-            
+
             // Verify escrow PDA is correctly derived to prevent substitution attacks
             let (expected_escrow_pda, _bump) = Pubkey::find_program_address(
-                &[b"escrow", channel.key().as_ref(), ctx.accounts.user.key().as_ref()],
-                &crate::ID
+                &[
+                    b"escrow",
+                    channel.key().as_ref(),
+                    ctx.accounts.user.key().as_ref(),
+                ],
+                &crate::ID,
             );
-            let escrow_account = ctx.accounts.escrow_account.as_ref()
+            let escrow_account = ctx
+                .accounts
+                .escrow_account
+                .as_ref()
                 .ok_or(PodComError::InsufficientFunds)?;
-            
+
             if escrow_account.key() != expected_escrow_pda {
                 return Err(PodComError::Unauthorized.into());
             }
-            
+
             // Verify sufficient balance with overflow protection
             if escrow.amount < channel.fee_per_message {
                 return Err(PodComError::InsufficientFunds.into());
             }
-            
+
             // ATOMIC OPERATION: Deduct fee and grant access in single transaction
-            let escrow_mut = ctx.accounts.escrow_account.as_mut()
+            let escrow_mut = ctx
+                .accounts
+                .escrow_account
+                .as_mut()
                 .ok_or(PodComError::InsufficientFunds)?;
-            escrow_mut.amount = escrow_mut.amount.checked_sub(channel.fee_per_message)
+            escrow_mut.amount = escrow_mut
+                .amount
+                .checked_sub(channel.fee_per_message)
                 .ok_or(PodComError::InsufficientFunds)?;
-            
+
             // Update channel escrow balance atomically
-            channel.escrow_balance = channel.escrow_balance.checked_add(channel.fee_per_message)
+            channel.escrow_balance = channel
+                .escrow_balance
+                .checked_add(channel.fee_per_message)
                 .ok_or(PodComError::InsufficientFunds)?;
         }
 
@@ -1052,15 +1373,15 @@ pub mod pod_com {
                 if invitation.invitee != ctx.accounts.user.key() {
                     return Err(PodComError::PrivateChannelRequiresInvitation.into());
                 }
-                
+
                 if invitation.is_used || invitation.is_accepted {
                     return Err(PodComError::PrivateChannelRequiresInvitation.into());
                 }
-                
+
                 if clock.unix_timestamp > invitation.expires_at {
                     return Err(PodComError::MessageExpired.into());
                 }
-                
+
                 // CRYPTOGRAPHIC VERIFICATION: Re-create and verify invitation hash
                 let mut hash_input = Vec::new();
                 hash_input.extend_from_slice(&invitation.channel.to_bytes());
@@ -1068,14 +1389,13 @@ pub mod pod_com {
                 hash_input.extend_from_slice(&invitation.invitee.to_bytes());
                 hash_input.extend_from_slice(&invitation.nonce.to_le_bytes());
                 hash_input.extend_from_slice(&invitation.created_at.to_le_bytes());
-                
+
                 let computed_hash = anchor_lang::solana_program::keccak::hash(&hash_input);
-                
+
                 // Verify the invitation hash matches to prevent forgery
                 if computed_hash.to_bytes() != invitation.invitation_hash {
                     return Err(PodComError::Unauthorized.into());
                 }
-                
             } else {
                 return Err(PodComError::PrivateChannelRequiresInvitation.into());
             }
@@ -1147,24 +1467,25 @@ pub mod pod_com {
         let clock = Clock::get()?;
 
         // SECURITY: Comprehensive message content validation
-        
+
         // Validate content length
         if content.len() > MAX_MESSAGE_CONTENT_LENGTH {
             return Err(PodComError::MessageContentTooLong.into());
         }
-        
+
         // Reject empty messages
         if content.trim().is_empty() {
             return Err(PodComError::MessageContentTooLong.into());
         }
-        
+
         // Validate message content for dangerous patterns
         if !super::is_valid_message_content(&content) {
             return Err(PodComError::MessageContentTooLong.into());
         }
-        
+
         // Additional safety checks
-        if content.len() > 10000 { // Extra safety beyond MAX_MESSAGE_CONTENT_LENGTH
+        if content.len() > 10000 {
+            // Extra safety beyond MAX_MESSAGE_CONTENT_LENGTH
             return Err(PodComError::MessageContentTooLong.into());
         }
 
@@ -1180,7 +1501,7 @@ pub mod pod_com {
         let burst_window = 10; // Burst detection window
 
         let participant = &mut ctx.accounts.participant_account;
-        
+
         // Enhanced rate limiting algorithm with multiple time windows
         if participant.last_message_at > 0 {
             let time_since_last = current_time - participant.last_message_at;
@@ -1198,7 +1519,7 @@ pub mod pod_com {
                 } else {
                     0
                 };
-                
+
                 if recent_burst_count >= burst_limit {
                     return Err(PodComError::RateLimitExceeded.into());
                 }
@@ -1210,7 +1531,9 @@ pub mod pod_com {
                     return Err(PodComError::RateLimitExceeded.into());
                 }
                 // Use checked arithmetic to prevent overflow attacks
-                participant.messages_sent = participant.messages_sent.checked_add(1)
+                participant.messages_sent = participant
+                    .messages_sent
+                    .checked_add(1)
                     .ok_or(PodComError::RateLimitExceeded)?;
             } else {
                 // Reset counter for new time window
@@ -1220,7 +1543,7 @@ pub mod pod_com {
             // First message from this participant
             participant.messages_sent = 1;
         }
-        
+
         // Update timestamp for next rate limit calculation
         participant.last_message_at = current_time;
 
@@ -1242,7 +1565,11 @@ pub mod pod_com {
 
     // Invite user to private channel with cryptographic security
     // SECURITY ENHANCEMENT (MED-01): Cryptographically secure single-use invitations
-    pub fn invite_to_channel(ctx: Context<InviteToChannel>, invitee: Pubkey, nonce: u64) -> Result<()> {
+    pub fn invite_to_channel(
+        ctx: Context<InviteToChannel>,
+        invitee: Pubkey,
+        nonce: u64,
+    ) -> Result<()> {
         let channel = &ctx.accounts.channel_account;
         let invitation = &mut ctx.accounts.invitation_account;
         let inviter_agent = &mut ctx.accounts.agent_account;
@@ -1286,7 +1613,7 @@ pub mod pod_com {
         hash_input.extend_from_slice(&invitee.to_bytes());
         hash_input.extend_from_slice(&nonce.to_le_bytes());
         hash_input.extend_from_slice(&clock.unix_timestamp.to_le_bytes());
-        
+
         // Use Solana's built-in keccak hash for the invitation verification
         let invitation_hash = anchor_lang::solana_program::keccak::hash(&hash_input);
 
@@ -1441,20 +1768,20 @@ pub mod pod_com {
     // =============================================================================
     // ZK COMPRESSION FUNCTIONS - SECURITY CRITICAL
     // =============================================================================
-    
+
     /*
      * SECURITY NOTICE (AUD-2024-05): ZK COMPRESSION FUNCTIONS
      *
      * These functions integrate with Light Protocol for Zero-Knowledge compression.
      * This logic has undergone an internal security audit and is considered stable
      * for beta deployments. External review is recommended before mainnet usage.
-     * 
+     *
      * KNOWN RISKS:
      * - Proof forgery attacks if verification logic is flawed
      * - Data corruption if compression/decompression fails
      * - State inconsistency between on-chain and off-chain data
      * - Potential for DOS attacks via malformed proofs
-     * 
+     *
      * Recommended best practices:
      * 1. Independent security audit by cryptography experts
      * 2. Extensive testing with malicious inputs
@@ -1476,14 +1803,17 @@ pub mod pod_com {
         let clock = Clock::get()?;
 
         // SECURITY CHECKS (CRIT-01): Comprehensive validation for ZK compression
-        
+
         // Validate content length for IPFS storage with stricter limits for compression
         if content.len() > MAX_MESSAGE_CONTENT_LENGTH * 10 {
             return Err(PodComError::MessageContentTooLong.into());
         }
-        
+
         // Validate IPFS hash format to prevent injection attacks
-        if ipfs_hash.is_empty() || ipfs_hash.len() > 100 || !ipfs_hash.chars().all(|c| c.is_alphanumeric()) {
+        if ipfs_hash.is_empty()
+            || ipfs_hash.len() > 100
+            || !ipfs_hash.chars().all(|c| c.is_alphanumeric())
+        {
             return Err(PodComError::InvalidMetadataUriLength.into()); // Reusing error for invalid hash
         }
 
@@ -1491,17 +1821,21 @@ pub mod pod_com {
         if !participant.is_active {
             return Err(PodComError::NotInChannel.into());
         }
-        
+
         // Verify participant PDA derivation to prevent substitution attacks
         let agent_account = &ctx.accounts.participant_account;
         let (expected_participant_pda, _bump) = Pubkey::find_program_address(
-            &[b"participant", channel.key().as_ref(), agent_account.participant.as_ref()],
-            &crate::ID
+            &[
+                b"participant",
+                channel.key().as_ref(),
+                agent_account.participant.as_ref(),
+            ],
+            &crate::ID,
         );
         if ctx.accounts.participant_account.key() != expected_participant_pda {
             return Err(PodComError::Unauthorized.into());
         }
-        
+
         // Additional security: Verify all Light Protocol accounts are legitimate
         // This helps prevent malicious account substitution in ZK operations
         if ctx.accounts.system_program.key() != anchor_lang::system_program::ID {
@@ -1544,8 +1878,6 @@ pub mod pod_com {
             edited_at: None,
             reply_to,
         };
-
-
 
         // Emit event for indexing
         emit!(MessageBroadcast {
@@ -1613,8 +1945,6 @@ pub mod pod_com {
             metadata_hash,
         };
 
-
-
         // Update channel participant count
         channel.current_participants += 1;
 
@@ -1658,7 +1988,7 @@ pub mod pod_com {
         // Light Protocol batch compression implementation
         let mut compressed_data = Vec::new();
         let mut total_size = 0u64;
-        
+
         for (i, hash) in message_hashes.iter().enumerate() {
             // Verify hash format and create compressed account entry
             if hash.iter().all(|&b| b == 0) {
@@ -1684,7 +2014,9 @@ pub mod pod_com {
 
         // Update channel state with batch sync info
         channel.last_sync_timestamp = sync_timestamp;
-        channel.total_compressed_messages = channel.total_compressed_messages.saturating_add(message_hashes.len() as u64);
+        channel.total_compressed_messages = channel
+            .total_compressed_messages
+            .saturating_add(message_hashes.len() as u64);
         channel.compressed_data_size = channel.compressed_data_size.saturating_add(total_size);
 
         // Calculate compression ratio (estimated)
@@ -1702,7 +2034,285 @@ pub mod pod_com {
             compression_ratio,
             total_size
         );
-        
+
+        Ok(())
+    }
+
+    // =============================================================================
+    // DYNAMIC PRODUCT MINTING - INSTRUCTIONS (NEW 2025 FEATURE)
+    // =============================================================================
+
+    /// Create a new product request for agents to fulfill
+    pub fn create_product_request(
+        ctx: Context<CreateProductRequest>,
+        target_agent: Pubkey,
+        request_type: ProductRequestType,
+        requirements_description: String,
+        offered_payment: u64,
+        deadline: i64,
+    ) -> Result<()> {
+        // Validate inputs
+        require!(
+            requirements_description.len() <= 500,
+            PodComError::MessageContentTooLong
+        );
+        require!(
+            offered_payment > 0,
+            PodComError::InsufficientPaymentForRequest
+        );
+
+        let clock = Clock::get()?;
+        require!(
+            deadline > clock.unix_timestamp,
+            PodComError::InvalidTimestamp
+        );
+
+        let request_account = &mut ctx.accounts.request_account;
+        let requester_agent = &ctx.accounts.requester_agent;
+
+        // Initialize the product request
+        request_account.requester = requester_agent.key();
+        request_account.target_agent = target_agent;
+        request_account.request_type = request_type;
+        request_account.requirements_description = requirements_description.clone();
+        request_account.offered_payment = offered_payment;
+        request_account.deadline = deadline;
+        request_account.created_at = clock.unix_timestamp;
+        request_account.status = ProductRequestStatus::Pending;
+        request_account.escrow_account = None;
+        request_account.bump = ctx.bumps.request_account;
+
+        // Emit event
+        emit!(ProductRequestCreated {
+            request_id: request_account.key(),
+            requester: requester_agent.key(),
+            target_agent,
+            request_type,
+            offered_payment,
+            deadline,
+            timestamp: clock.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    /// Accept a product request and start working on it
+    pub fn accept_product_request(
+        ctx: Context<AcceptProductRequest>,
+        estimated_completion: i64,
+    ) -> Result<()> {
+        let request_account = &mut ctx.accounts.request_account;
+        let provider_agent = &ctx.accounts.provider_agent;
+        let clock = Clock::get()?;
+
+        // Validate request is still pending and not expired
+        require!(
+            request_account.status == ProductRequestStatus::Pending,
+            PodComError::InvalidMessageStatusTransition
+        );
+        require!(
+            request_account.deadline > clock.unix_timestamp,
+            PodComError::ProductRequestExpired
+        );
+        require!(
+            request_account.target_agent == provider_agent.key(),
+            PodComError::Unauthorized
+        );
+
+        // Update request status
+        request_account.status = ProductRequestStatus::InProgress;
+
+        // Emit event
+        emit!(ProductRequestAccepted {
+            request_id: request_account.key(),
+            provider: provider_agent.key(),
+            estimated_completion,
+            timestamp: clock.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    /// Mint a data product NFT as the result of a completed request
+    pub fn mint_data_product(
+        ctx: Context<MintDataProduct>,
+        request_id: Option<Pubkey>,
+        product_type: DataProductType,
+        title: String,
+        description: String,
+        content_hash: [u8; 32],
+        ipfs_cid: String,
+        price: u64,
+        royalty_percentage: u16,
+    ) -> Result<()> {
+        // Validate inputs
+        require!(title.len() <= 200, PodComError::ChannelNameTooLong);
+        require!(
+            description.len() <= 500,
+            PodComError::ChannelDescriptionTooLong
+        );
+        require!(price > 0, PodComError::ProductPriceCannotBeZero);
+        require!(
+            royalty_percentage <= 10000,
+            PodComError::InvalidRoyaltyPercentage
+        );
+        require!(ipfs_cid.len() <= 100, PodComError::InvalidIpfsCidFormat);
+
+        let product_account = &mut ctx.accounts.product_account;
+        let creator_agent = &ctx.accounts.creator_agent;
+        let clock = Clock::get()?;
+
+        // If linked to a request, validate it
+        if let Some(req_id) = request_id {
+            let request_account = &ctx.accounts.request_account;
+            require!(request_account.is_some(), PodComError::ProductNotFound);
+            let req = request_account.as_ref().unwrap();
+            require!(req.key() == req_id, PodComError::ProductNotFound);
+            require!(
+                req.status == ProductRequestStatus::InProgress,
+                PodComError::InvalidMessageStatusTransition
+            );
+            require!(
+                req.target_agent == creator_agent.key(),
+                PodComError::Unauthorized
+            );
+        }
+
+        // Initialize the data product
+        product_account.creator = creator_agent.key();
+        product_account.request_id = request_id;
+        product_account.product_type = product_type;
+        product_account.title = title;
+        product_account.description = description;
+        product_account.content_hash = content_hash;
+        product_account.ipfs_cid = ipfs_cid;
+        product_account.price = price;
+        product_account.royalty_percentage = royalty_percentage;
+        product_account.created_at = clock.unix_timestamp;
+        product_account.updated_at = clock.unix_timestamp;
+        product_account.total_sales = 0;
+        product_account.total_revenue = 0;
+        product_account.is_active = true;
+        product_account.bump = ctx.bumps.product_account;
+
+        // If linked to request, mark request as completed
+        if request_id.is_some() {
+            let request_account = ctx.accounts.request_account.as_mut().unwrap();
+            request_account.status = ProductRequestStatus::Completed;
+        }
+
+        // Emit event
+        emit!(DataProductMinted {
+            product_id: product_account.key(),
+            creator: creator_agent.key(),
+            request_id,
+            product_type,
+            price,
+            royalty_percentage,
+            timestamp: clock.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    /// Register a capability service that agents can offer
+    pub fn register_capability_service(
+        ctx: Context<RegisterCapabilityService>,
+        service_type: CapabilityServiceType,
+        service_name: String,
+        service_description: String,
+        base_price: u64,
+        estimated_completion_time: u64,
+        max_concurrent_requests: u32,
+        requires_escrow: bool,
+    ) -> Result<()> {
+        // Validate inputs
+        require!(service_name.len() <= 200, PodComError::ChannelNameTooLong);
+        require!(
+            service_description.len() <= 500,
+            PodComError::ChannelDescriptionTooLong
+        );
+        require!(base_price > 0, PodComError::ProductPriceCannotBeZero);
+        require!(max_concurrent_requests > 0, PodComError::InvalidServiceType);
+
+        let service_account = &mut ctx.accounts.service_account;
+        let provider_agent = &ctx.accounts.provider_agent;
+        let clock = Clock::get()?;
+
+        // Initialize the capability service
+        service_account.provider = provider_agent.key();
+        service_account.service_type = service_type;
+        service_account.service_name = service_name;
+        service_account.service_description = service_description;
+        service_account.base_price = base_price;
+        service_account.estimated_completion_time = estimated_completion_time;
+        service_account.max_concurrent_requests = max_concurrent_requests;
+        service_account.current_active_requests = 0;
+        service_account.total_completed = 0;
+        service_account.average_rating = 0;
+        service_account.total_revenue = 0;
+        service_account.is_available = true;
+        service_account.requires_escrow = requires_escrow;
+        service_account.bump = ctx.bumps.service_account;
+
+        // Emit event
+        emit!(CapabilityServiceRegistered {
+            service_id: service_account.key(),
+            provider: provider_agent.key(),
+            service_type,
+            base_price,
+            timestamp: clock.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    /// Purchase a data product (transfers ownership and pays royalties)
+    pub fn purchase_product(ctx: Context<PurchaseProduct>, price: u64) -> Result<()> {
+        let product_account = &mut ctx.accounts.product_account;
+        let buyer_agent = &ctx.accounts.buyer_agent;
+        let creator_agent = &ctx.accounts.creator_agent;
+        let buyer = &mut ctx.accounts.buyer;
+        let creator = &mut ctx.accounts.creator;
+        let clock = Clock::get()?;
+
+        // Validate product is active and price matches
+        require!(product_account.is_active, PodComError::ServiceNotAvailable);
+        require!(
+            price >= product_account.price,
+            PodComError::InsufficientPaymentForRequest
+        );
+
+        // Calculate royalty payment
+        let royalty_amount = (price * product_account.royalty_percentage as u64) / 10000;
+        let creator_payment = price - royalty_amount;
+
+        // Transfer payment to creator
+        let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
+            &buyer.key(),
+            &creator.key(),
+            creator_payment,
+        );
+        anchor_lang::solana_program::program::invoke(
+            &transfer_instruction,
+            &[buyer.to_account_info(), creator.to_account_info()],
+        )?;
+
+        // Update product statistics
+        product_account.total_sales += 1;
+        product_account.total_revenue += price;
+        product_account.updated_at = clock.unix_timestamp;
+
+        // Emit event
+        emit!(ProductPurchased {
+            product_id: product_account.key(),
+            buyer: buyer_agent.key(),
+            seller: creator_agent.key(),
+            price,
+            royalty_paid: royalty_amount,
+            timestamp: clock.unix_timestamp,
+        });
+
         Ok(())
     }
 }
@@ -2099,4 +2709,147 @@ pub struct BatchSyncCompressedMessages<'info> {
     pub nullifier_queue: AccountInfo<'info>,
     /// CHECK: CPI authority PDA
     pub cpi_authority_pda: AccountInfo<'info>,
+}
+
+// =============================================================================
+// DYNAMIC PRODUCT MINTING - CONTEXT STRUCTURES (NEW 2025 FEATURE)
+// =============================================================================
+
+#[derive(Accounts)]
+#[instruction(target_agent: Pubkey, request_type: ProductRequestType, requirements_description: String)]
+pub struct CreateProductRequest<'info> {
+    #[account(
+        init,
+        payer = requester,
+        space = PRODUCT_REQUEST_SPACE,
+        seeds = [
+            b"product_request",
+            requester_agent.key().as_ref(),
+            target_agent.as_ref(),
+            &[request_type as u8],
+            requirements_description.as_bytes()
+        ],
+        bump
+    )]
+    pub request_account: Account<'info, ProductRequestAccount>,
+    #[account(
+        seeds = [b"agent", requester.key().as_ref()],
+        bump = requester_agent.bump,
+        constraint = requester.key() == requester_agent.pubkey @ PodComError::Unauthorized,
+    )]
+    pub requester_agent: Account<'info, AgentAccount>,
+    #[account(mut)]
+    pub requester: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AcceptProductRequest<'info> {
+    #[account(
+        mut,
+        constraint = request_account.target_agent == provider_agent.key() @ PodComError::Unauthorized
+    )]
+    pub request_account: Account<'info, ProductRequestAccount>,
+    #[account(
+        seeds = [b"agent", provider.key().as_ref()],
+        bump = provider_agent.bump,
+        constraint = provider.key() == provider_agent.pubkey @ PodComError::Unauthorized,
+    )]
+    pub provider_agent: Account<'info, AgentAccount>,
+    #[account(mut)]
+    pub provider: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(
+    request_id: Option<Pubkey>,
+    product_type: DataProductType,
+    title: String,
+    description: String,
+    content_hash: [u8; 32],
+    ipfs_cid: String
+)]
+pub struct MintDataProduct<'info> {
+    #[account(
+        init,
+        payer = creator,
+        space = DATA_PRODUCT_SPACE,
+        seeds = [
+            b"data_product",
+            creator_agent.key().as_ref(),
+            &content_hash,
+            title.as_bytes()
+        ],
+        bump
+    )]
+    pub product_account: Account<'info, DataProductAccount>,
+    #[account(
+        mut,
+        constraint = request_account.is_some() || request_id.is_none() @ PodComError::ProductNotFound
+    )]
+    pub request_account: Option<Account<'info, ProductRequestAccount>>,
+    #[account(
+        seeds = [b"agent", creator.key().as_ref()],
+        bump = creator_agent.bump,
+        constraint = creator.key() == creator_agent.pubkey @ PodComError::Unauthorized,
+    )]
+    pub creator_agent: Account<'info, AgentAccount>,
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(
+    service_type: CapabilityServiceType,
+    service_name: String,
+    service_description: String
+)]
+pub struct RegisterCapabilityService<'info> {
+    #[account(
+        init,
+        payer = provider,
+        space = CAPABILITY_SERVICE_SPACE,
+        seeds = [
+            b"capability_service",
+            provider_agent.key().as_ref(),
+            &[service_type as u8],
+            service_name.as_bytes()
+        ],
+        bump
+    )]
+    pub service_account: Account<'info, CapabilityServiceAccount>,
+    #[account(
+        seeds = [b"agent", provider.key().as_ref()],
+        bump = provider_agent.bump,
+        constraint = provider.key() == provider_agent.pubkey @ PodComError::Unauthorized,
+    )]
+    pub provider_agent: Account<'info, AgentAccount>,
+    #[account(mut)]
+    pub provider: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct PurchaseProduct<'info> {
+    #[account(mut)]
+    pub product_account: Account<'info, DataProductAccount>,
+    #[account(
+        seeds = [b"agent", buyer.key().as_ref()],
+        bump = buyer_agent.bump,
+        constraint = buyer.key() == buyer_agent.pubkey @ PodComError::Unauthorized,
+    )]
+    pub buyer_agent: Account<'info, AgentAccount>,
+    #[account(
+        seeds = [b"agent", creator.key().as_ref()],
+        bump = creator_agent.bump,
+        constraint = creator.key() == creator_agent.pubkey @ PodComError::Unauthorized,
+    )]
+    pub creator_agent: Account<'info, AgentAccount>,
+    #[account(mut)]
+    pub buyer: Signer<'info>,
+    /// CHECK: Creator wallet for payment transfer
+    #[account(mut)]
+    pub creator: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }

@@ -1,48 +1,125 @@
-# podAI Core - Git Ignore Rules
+# podAI Platform - Comprehensive .gitignore for 2025
 
-# Dependencies
+# ============================================================================
+# DEPENDENCIES & PACKAGE MANAGERS
+# ============================================================================
+
+# Node.js dependencies
 node_modules/
-**/node_modules/
-*.lock
-yarn.lock
-package-lock.json
-!bun.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Build outputs
+# Bun
+bun.lock
+.bun/
+
+# Package manager locks (keep only bun.lock)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ============================================================================
+# BUILD OUTPUTS & DISTRIBUTIONS
+# ============================================================================
+
+# TypeScript/JavaScript builds
 dist/
 build/
-target/
+out/
 *.tsbuildinfo
+.rpt2_cache/
+.eslintcache
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Rust builds
+target/
+Cargo.lock
+**/*.rs.bk
 
-# IDEs and editors
+# WebAssembly
+*.wasm
+packages/wasm/
+
+# Anchor builds
+.anchor/
+target/deploy/
+target/idl/
+
+# ============================================================================
+# DEVELOPMENT & TESTING
+# ============================================================================
+
+# Test outputs
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+playwright-report/
+test-results.xml
+
+# Vitest
+.vitest/
+
+# Jest
+.jest/
+
+# Testing databases & files
+*.db
+*.sqlite
+*.sqlite3
+test.db
+
+# ============================================================================
+# DEVELOPMENT TOOLS & CACHE
+# ============================================================================
+
+# IDE & Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Temporary files
+.tmp/
+temp/
+.cache/
+.parcel-cache/
 
-# Logs
+# Hot reload & development
+.next/
+.nuxt/
+.vuepress/dist
+
+# ============================================================================
+# ENVIRONMENT & CONFIGURATION
+# ============================================================================
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Configuration overrides
+config.local.js
+config.local.json
+
+# ============================================================================
+# LOGS & DEBUGGING
+# ============================================================================
+
+# Log files
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
 # Runtime data
@@ -51,143 +128,251 @@ pids/
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-# nyc test coverage
-.nyc_output/
+# ============================================================================
+# BLOCKCHAIN & SOLANA SPECIFIC
+# ============================================================================
 
-# Dependency directories
-jspm_packages/
+# Solana CLI
+.config/solana/
+solana-keygen.json
 
-# TypeScript cache
-*.tsbuildinfo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# Stores VSCode versions used for testing VSCode extensions
-.vscode-test
-
-# Solana/Anchor specific
+# Anchor
 .anchor/
-target/
-tests/fixtures/
-deploy/
-migrations/
-**/program-id.txt
+anchor.lock
+Anchor.lock
 
-# Rust
-**/*.rs.bk
-Cargo.lock
-target/
+# Keypairs (CRITICAL - Never commit private keys)
+*.json
+!package.json
+!tsconfig*.json
+!jest.config.json
+!rollup.config.json
+!vite.config.json
+!playwright.config.json
+!.vscode/*.json
+!.github/**/*.json
 
-# Test results
-test-results/
-test-reports/
-junit.xml
+# Solana program artifacts
+*.so
 
-# Temporary files
-tmp/
-temp/
+# ============================================================================
+# AI & MACHINE LEARNING
+# ============================================================================
+
+# Model files
+*.model
+*.pkl
+*.h5
+*.pth
+*.onnx
+models/
+checkpoints/
+
+# Training data
+datasets/
+training_data/
+*.csv
+*.parquet
+
+# ML experiment tracking
+mlruns/
+.mlflow/
+wandb/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# ============================================================================
+# SYSTEM & OS FILES
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
 *.tmp
 *.temp
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
 
-# Security
-.secrets
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# CLOUD & DEPLOYMENT
+# ============================================================================
+
+# Vercel
+.vercel/
+
+# Netlify
+.netlify/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# AWS
+.aws/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# ============================================================================
+# DOCUMENTATION & ASSETS
+# ============================================================================
+
+# Generated documentation
+docs/api/
+docs/generated/
+.docusaurus/
+_site/
+
+# Asset optimization
+.imageoptim/
+
+# ============================================================================
+# SECURITY & SECRETS
+# ============================================================================
+
+# Secrets & credentials
+secrets/
+credentials/
 *.pem
 *.key
-id_rsa*
-id_ed25519*
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+
+# Environment secrets
+.env.secrets
+.env.*.secrets
+
+# GPG
+*.gpg
+*.asc
+
+# ============================================================================
+# PERFORMANCE & PROFILING
+# ============================================================================
+
+# Profiling data
+*.cpuprofile
+*.heapprofile
+*.heapsnapshot
+.clinic/
+0x/
+
+# Benchmarking
+benchmark-results/
+.benchmarks/
+
+# ============================================================================
+# DEVELOPMENT ARTIFACTS
+# ============================================================================
+
+# Storybook
+storybook-static/
+
+# Size analysis
+bundle-analyzer-report.html
+.size-limit.json
+
+# TypeDoc
+typedoc/
+
+# Rollup
+.rollup.cache/
+
+# ============================================================================
+# PROJECT SPECIFIC
+# ============================================================================
+
+# podAI specific ignores
+.podai/
+podai-debug.log
+
+# Agent data
+agent-data/
+agent-cache/
+
+# P2P networking
+.libp2p/
+peer-data/
+
+# IPFS
+.ipfs/
+
+# ZK proofs
+*.proof
+proofs/
+
+# Development databases
+dev.db
+test.db
+staging.db
+
+# ============================================================================
+# WORKSPACE SPECIFIC
+# ============================================================================
+
+# Workspace cache
+.workspace/
+.bun/
+
+# Development containers
+.devcontainer/
+
+# GitHub Codespaces
+.vscode-remote/
+
+# ============================================================================
+# BACKUP & ARCHIVE FILES
+# ============================================================================
 
 # Backup files
 *.bak
 *.backup
 *.old
+*.orig
+*.save
 
-# Cache directories
-.cache/
-.parcel-cache/
-
-# TypeScript
-*.d.ts.map
-*.js.map
-
-# Local configuration
-.local
-local/
-
-# Reports
-reports/
-validation_report.json
-
-# Documentation builds
-docs/_build/
-docs/.build/
-
-# Generated files
-src/generated/
-packages/*/generated/
-
-# ZK Compression artifacts
-*.zkey
-*.r1cs
-*.wasm
-
-# Blockchain artifacts
-artifacts/
-cache/
-deployments/
-
-# Development artifacts
-.dev/
-.development/
-
-# Binary files
-*.bin
-*.exe
-*.dll
-*.so
-*.dylib
-
-# Archives
-*.zip
+# Archive files
 *.tar
 *.tar.gz
+*.tgz
+*.zip
 *.rar
-*.7z
-
-# Images (if not needed for documentation)
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.bmp
-*.tiff
-*.ico
-
-# Video files
-*.mp4
-*.avi
-*.mov
-*.wmv
-*.flv
-
-# Audio files
-*.mp3
-*.wav
-*.aac
-*.flac 
+*.7z 

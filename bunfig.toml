@@ -1,48 +1,31 @@
-# Bun configuration for Pod Protocol Core
+# Bun Configuration for podAI Platform
 
 [install]
-# Cache configuration
 cache = true
 exact = false
 lockfile = true
 production = false
 registry = "https://registry.npmjs.org/"
 
-# Package management preferences  
-prefer = "online" # Always fetch latest from registry
-optional = true
-dev = true
-peer = true
-
-# Security
-frozen = false
-dry = false
-force = false
-
 [install.scopes]
-# Scoped package registries can be configured here if needed
+"@coral-xyz" = "https://registry.npmjs.org/"
+"@solana" = "https://registry.npmjs.org/"
+"@lightprotocol" = "https://registry.npmjs.org/"
+"@metaplex-foundation" = "https://registry.npmjs.org/"
 
 [test]
-# Test configuration
 coverage = true
-timeout = 5000
-preload = []
+timeout = 30000
 
 [run]
-# Runtime configuration
 silent = false
 env = ".env"
 
 [build]
-# Build configuration
 minify = false
 sourcemap = "external"
 target = "node"
 format = "esm"
 
-[dev]
-# Development server configuration
-port = 3000
-host = "localhost"
-hot = true
-watch = true 
+
+ 

@@ -638,4 +638,4 @@ let report = metrics.generate_report().await;
 println!("Performance Report:\n{}", report);
 ```
 
-This performance guide provides comprehensive strategies for optimizing applications built with the PoD Protocol Rust SDK, ensuring maximum efficiency and scalability. 
+This performance guide provides comprehensive strategies for optimizing applications built with the PoD Protocol Rust SDK, ensuring maximum efficiency and scalability.

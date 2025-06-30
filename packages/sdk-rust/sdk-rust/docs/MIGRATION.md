@@ -75,6 +75,7 @@ serde_json = "1.0"
 ### Client Initialization
 
 **TypeScript:**
+
 ```typescript
 import { PodComClient, PodComConfig } from '@pod-protocol/sdk';
 
@@ -84,6 +85,7 @@ await client.initialize(wallet);
 ```
 
 **Rust:**
+
 ```rust
 use pod_protocol_sdk::{PodComClient, PodComConfig};
 use solana_sdk::signer::keypair::Keypair;
@@ -103,6 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Agent Registration
 
 **TypeScript:**
+
 ```typescript
 const signature = await client.agents.registerAgent(
     1024, // capabilities
@@ -112,6 +115,7 @@ console.log('Agent registered:', signature);
 ```
 
 **Rust:**
+
 ```rust
 let signature = client.agents.register_agent(
     1024, // capabilities
@@ -124,6 +128,7 @@ println!("Agent registered: {}", signature);
 ### Message Sending
 
 **TypeScript:**
+
 ```typescript
 const message = {
     type: 'chat',
@@ -140,6 +145,7 @@ const signature = await client.messages.sendMessage(
 ```
 
 **Rust:**
+
 ```rust
 use serde_json::json;
 use pod_protocol_sdk::MessageType;
@@ -162,6 +168,7 @@ let signature = client.messages.send_message(
 ### Error Handling Migration
 
 **TypeScript:**
+
 ```typescript
 try {
     const agent = await client.agents.getAgent(pubkey);
@@ -176,6 +183,7 @@ try {
 ```
 
 **Rust:**
+
 ```rust
 use pod_protocol_sdk::error::AgentError;
 
@@ -193,6 +201,7 @@ match client.agents.get_agent(&pubkey).await {
 ### Async Patterns
 
 **TypeScript:**
+
 ```typescript
 // Promise.all for concurrent operations
 const [agent1, agent2, agent3] = await Promise.all([
@@ -203,6 +212,7 @@ const [agent1, agent2, agent3] = await Promise.all([
 ```
 
 **Rust:**
+
 ```rust
 use futures::future::try_join_all;
 
@@ -232,6 +242,7 @@ pod-protocol-sdk = "1.0.0"
 ### Type Annotations Migration
 
 **Python:**
+
 ```python
 from typing import Optional, List
 from pod_protocol import PodComClient, AgentAccount
@@ -246,6 +257,7 @@ async def get_agents(client: PodComClient,
 ```
 
 **Rust:**
+
 ```rust
 use solana_sdk::pubkey::Pubkey;
 use pod_protocol_sdk::{PodComClient, AgentAccount, error::AgentError};
@@ -268,6 +280,7 @@ async fn get_agents(
 ### Dictionary/JSON Handling
 
 **Python:**
+
 ```python
 import json
 
@@ -284,6 +297,7 @@ payload = json.dumps(message_data).encode('utf-8')
 ```
 
 **Rust:**
+
 ```rust
 use serde::{Serialize, Deserialize};
 use serde_json;
@@ -317,6 +331,7 @@ let payload = serde_json::to_vec(&message_data)?;
 ### List Comprehensions to Iterators
 
 **Python:**
+
 ```python
 # Filter and transform agents
 active_agents = [
@@ -326,6 +341,7 @@ active_agents = [
 ```
 
 **Rust:**
+
 ```rust
 use chrono::{DateTime, Utc};
 
@@ -340,6 +356,7 @@ let active_agents: Vec<Pubkey> = agents
 ### Exception Handling
 
 **Python:**
+
 ```python
 try:
     signature = await client.messages.send_message(
@@ -356,6 +373,7 @@ except Exception as e:
 ```
 
 **Rust:**
+
 ```rust
 use pod_protocol_sdk::error::{MessageError, NetworkError, ValidationError};
 
@@ -407,6 +425,7 @@ match client.messages.send_message(recipient, payload, MessageType::Text, None).
 ### 1. Configuration Management
 
 **Before (TypeScript):**
+
 ```typescript
 const config = new PodComConfig({
     rpcUrl: 'https://api.devnet.solana.com',
@@ -416,6 +435,7 @@ const config = new PodComConfig({
 ```
 
 **After (Rust):**
+
 ```rust
 let config = PodComConfig::builder()
     .rpc_url("https://api.devnet.solana.com")
@@ -427,6 +447,7 @@ let config = PodComConfig::builder()
 ### 2. Batch Operations
 
 **Before (TypeScript):**
+
 ```typescript
 const results = await Promise.all(
     messages.map(msg => client.messages.sendMessage(
@@ -438,6 +459,7 @@ const results = await Promise.all(
 ```
 
 **After (Rust):**
+
 ```rust
 let results = client.messages.send_messages_batch(messages).await?;
 ```
@@ -445,6 +467,7 @@ let results = client.messages.send_messages_batch(messages).await?;
 ### 3. Event Handling
 
 **Before (TypeScript):**
+
 ```typescript
 client.on('messageReceived', (message) => {
     console.log('New message:', message);
@@ -452,6 +475,7 @@ client.on('messageReceived', (message) => {
 ```
 
 **After (Rust):**
+
 ```rust
 use tokio_stream::StreamExt;
 
@@ -464,6 +488,7 @@ while let Some(message) = message_stream.next().await {
 ### 4. Resource Management
 
 **Before (Python):**
+
 ```python
 async with PodComClient(config) as client:
     await client.initialize(wallet)
@@ -472,6 +497,7 @@ async with PodComClient(config) as client:
 ```
 
 **After (Rust):**
+
 ```rust
 {
     let mut client = PodComClient::new(config)?;
@@ -507,6 +533,7 @@ Operation Comparison:
 ### Performance Tips
 
 1. **Use appropriate data structures**:
+
    ```rust
    // Use SmallVec for small, frequently used collections
    use smallvec::{SmallVec, smallvec};
@@ -514,6 +541,7 @@ Operation Comparison:
    ```
 
 2. **Leverage zero-copy when possible**:
+
    ```rust
    use bytes::Bytes;
    
@@ -523,6 +551,7 @@ Operation Comparison:
    ```
 
 3. **Use async streams for events**:
+
    ```rust
    use tokio_stream::StreamExt;
    
@@ -539,6 +568,7 @@ Operation Comparison:
 #### 1. Ownership and Borrowing
 
 **Problem:**
+
 ```rust
 let client = PodComClient::new(config)?;
 let agent = client.agents.get_agent(&pubkey).await?;
@@ -546,6 +576,7 @@ let another_agent = client.agents.get_agent(&pubkey2).await?; // Error: client m
 ```
 
 **Solution:**
+
 ```rust
 let client = PodComClient::new(config)?;
 let agent = client.agents.get_agent(&pubkey).await?;
@@ -555,12 +586,14 @@ let another_agent = client.agents.get_agent(&pubkey2).await?; // OK: using refer
 #### 2. String Handling
 
 **Problem:**
+
 ```rust
 let uri = "https://example.com/metadata.json";
 client.agents.register_agent(1024, uri).await?; // Error: expected String
 ```
 
 **Solution:**
+
 ```rust
 let uri = "https://example.com/metadata.json";
 client.agents.register_agent(1024, uri.to_string()).await?; // OK
@@ -571,12 +604,14 @@ client.agents.register_agent(1024, "https://example.com/metadata.json".to_string
 #### 3. Error Handling
 
 **Problem:**
+
 ```rust
 let result = client.agents.register_agent(1024, uri).await;
 println!("Result: {}", result); // Error: Result doesn't implement Display
 ```
 
 **Solution:**
+
 ```rust
 match client.agents.register_agent(1024, uri).await {
     Ok(signature) => println!("Success: {}", signature),
@@ -587,6 +622,7 @@ match client.agents.register_agent(1024, uri).await {
 #### 4. Async Context
 
 **Problem:**
+
 ```rust
 fn main() {
     let client = PodComClient::new(config)?;
@@ -595,6 +631,7 @@ fn main() {
 ```
 
 **Solution:**
+
 ```rust
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -629,4 +666,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   - [ ] Caching implemented
   - [ ] Profiling results reviewed
 
-This migration guide provides a comprehensive path for moving to the high-performance Rust SDK while maintaining functionality and gaining significant performance improvements. 
+This migration guide provides a comprehensive path for moving to the high-performance Rust SDK while maintaining functionality and gaining significant performance improvements.

@@ -1,12 +1,13 @@
-import type { Address } from '@solana/addresses';
 import { address } from '@solana/addresses';
+
+import type { Address } from '@solana/addresses';
 import type { KeyPairSigner } from '@solana/signers';
 
 /**
  * PoD Protocol Program ID on Solana Devnet
  */
 export const PROGRAM_ID = address(
-  "HEpGLgYsE1kP8aoYKyLFc3JVVrofS7T4zEA6fWBJsZps",
+  'HEpGLgYsE1kP8aoYKyLFc3JVVrofS7T4zEA6fWBJsZps'
 );
 
 /**
@@ -23,25 +24,25 @@ export enum MessageType {
  * Message status in the delivery lifecycle
  */
 export enum MessageStatus {
-  PENDING = "pending",
-  DELIVERED = "delivered", 
-  READ = "read",
-  FAILED = "failed",
+  PENDING = 'pending',
+  DELIVERED = 'delivered',
+  READ = 'read',
+  FAILED = 'failed',
 }
 
 /**
  * Channel visibility options
  */
 export enum ChannelVisibility {
-  Public = 0,
-  Private = 1,
-  Restricted = 2,
+  PUBLIC = 0,
+  PRIVATE = 1,
+  RESTRICTED = 2,
 }
 
 /**
  * Agent account data structure
  */
-export interface AgentAccount {
+export interface IAgentAccount {
   /** Agent's wallet public key */
   pubkey: Address;
   /** Bitmask representing agent capabilities */
@@ -63,7 +64,7 @@ export interface AgentAccount {
 /**
  * Message account data structure
  */
-export interface MessageAccount {
+export interface IMessageAccount {
   /** Message account public key */
   pubkey: Address;
   /** Sender's public key */
@@ -91,7 +92,7 @@ export interface MessageAccount {
 /**
  * Channel account data structure
  */
-export interface ChannelAccount {
+export interface IChannelAccount {
   /** Channel account public key */
   pubkey: Address;
   /** Channel creator's public key */
@@ -131,7 +132,7 @@ export interface ChannelAccount {
 /**
  * Escrow account data structure
  */
-export interface EscrowAccount {
+export interface IEscrowAccount {
   /** Associated channel public key */
   channel: Address;
   /** Depositor's public key */
@@ -167,13 +168,13 @@ export const AGENT_CAPABILITIES = {
  * Error types returned by PoD Protocol program
  */
 export enum PodComError {
-  InvalidMetadataUriLength = 6000,
-  Unauthorized = 6001,
-  MessageExpired = 6002,
-  InvalidMessageStatusTransition = 6003,
-  InsufficientAccounts = 6004,
-  InvalidAccountData = 6005,
-  InvalidInstructionData = 6006,
+  INVALID_METADATA_URI_LENGTH = 6000,
+  UNAUTHORIZED = 6001,
+  MESSAGE_EXPIRED = 6002,
+  INVALID_MESSAGE_STATUS_TRANSITION = 6003,
+  INSUFFICIENT_ACCOUNTS = 6004,
+  INVALID_ACCOUNT_DATA = 6005,
+  INVALID_INSTRUCTION_DATA = 6006,
 }
 
 /**
@@ -181,7 +182,7 @@ export enum PodComError {
  */
 export enum ErrorCode {
   PROGRAM_ERROR = 'PROGRAM_ERROR',
-  NETWORK_ERROR = 'NETWORK_ERROR', 
+  NETWORK_ERROR = 'NETWORK_ERROR',
   RPC_ERROR = 'RPC_ERROR',
   ACCOUNT_ERROR = 'ACCOUNT_ERROR',
   ACCOUNT_NOT_FOUND = 'ACCOUNT_NOT_FOUND',
@@ -196,13 +197,13 @@ export enum ErrorCode {
 /**
  * Configuration for PoD Protocol SDK
  */
-export interface PodComConfig {
+export interface IPodComConfig {
   /** Solana cluster endpoint */
   endpoint?: string;
   /** Program ID (defaults to devnet) */
   programId?: Address;
   /** Default commitment level */
-  commitment?: "processed" | "confirmed" | "finalized";
+  commitment?: 'processed' | 'confirmed' | 'finalized';
   /** IPFS configuration for off-chain storage */
   ipfs?: {
     /** Disable IPFS functionality completely */
@@ -267,7 +268,7 @@ export interface PodComConfig {
 /**
  * Options for creating a new agent
  */
-export interface CreateAgentOptions {
+export interface ICreateAgentOptions {
   /** Agent capabilities bitmask */
   capabilities: number;
   /** Metadata URI */
@@ -277,7 +278,7 @@ export interface CreateAgentOptions {
 /**
  * Options for updating an agent
  */
-export interface UpdateAgentOptions {
+export interface IUpdateAgentOptions {
   /** New capabilities (optional) */
   capabilities?: number;
   /** New metadata URI (optional) */
@@ -287,7 +288,7 @@ export interface UpdateAgentOptions {
 /**
  * Options for updating a channel
  */
-export interface UpdateChannelOptions {
+export interface IUpdateChannelOptions {
   /** New name (optional) */
   name?: string;
   /** New description (optional) */
@@ -301,7 +302,7 @@ export interface UpdateChannelOptions {
 /**
  * Options for sending a message
  */
-export interface SendMessageOptions {
+export interface ISendMessageOptions {
   /** Recipient's public key */
   recipient: Address;
   /** Message payload (will be hashed) */
@@ -319,7 +320,7 @@ export interface SendMessageOptions {
 /**
  * Options for creating a channel
  */
-export interface CreateChannelOptions {
+export interface ICreateChannelOptions {
   /** Channel name */
   name: string;
   /** Channel description */
@@ -337,7 +338,7 @@ export interface CreateChannelOptions {
 /**
  * Options for depositing to escrow
  */
-export interface DepositEscrowOptions {
+export interface IDepositEscrowOptions {
   /** Channel public key */
   channel: Address;
   /** Amount to deposit in lamports */
@@ -347,7 +348,7 @@ export interface DepositEscrowOptions {
 /**
  * Options for withdrawing from escrow
  */
-export interface WithdrawEscrowOptions {
+export interface IWithdrawEscrowOptions {
   /** Channel public key */
   channel: Address;
   /** Amount to withdraw in lamports */
@@ -357,7 +358,7 @@ export interface WithdrawEscrowOptions {
 /**
  * Options for broadcasting a message to a channel
  */
-export interface BroadcastMessageOptions {
+export interface IBroadcastMessageOptions {
   /** Channel public key */
   channelPDA: Address;
   /** Message content */
@@ -369,7 +370,7 @@ export interface BroadcastMessageOptions {
 }
 
 // Analytics interfaces
-export interface AgentMetrics {
+export interface IAgentMetrics {
   agentAddress: Address;
   messagesSent: number;
   messagesReceived: number;
@@ -382,7 +383,7 @@ export interface AgentMetrics {
   peakActivityHours: number[];
 }
 
-export interface MessageMetrics {
+export interface IMessageMetrics {
   totalMessages: number;
   deliveredMessages: number;
   failedMessages: number;
@@ -393,7 +394,7 @@ export interface MessageMetrics {
   timeframe: string;
 }
 
-export interface ChannelMetrics {
+export interface IChannelMetrics {
   totalChannels: number;
   activeChannels: number;
   totalMembers: number;
@@ -403,7 +404,7 @@ export interface ChannelMetrics {
   mostActiveChannels: Address[];
 }
 
-export interface NetworkMetrics {
+export interface INetworkMetrics {
   totalValueLocked: number;
   activeEscrows: number;
   networkHealth: number;
@@ -417,7 +418,7 @@ export interface NetworkMetrics {
   peakUsageHours: number[];
 }
 
-export interface PerformanceMetrics {
+export interface IPerformanceMetrics {
   avgConfirmationTime: number;
   avgTransactionFee: number;
   successRate: number;
@@ -429,7 +430,7 @@ export interface PerformanceMetrics {
 }
 
 // Discovery interfaces
-export interface AgentSearchFilters {
+export interface IAgentSearchFilters {
   capabilities?: number[];
   minReputation?: number;
   maxReputation?: number;
@@ -438,11 +439,11 @@ export interface AgentSearchFilters {
   lastActiveBefore?: number;
   limit?: number;
   offset?: number;
-  sortBy?: "relevance" | "recent" | "popular" | "reputation";
-  sortOrder?: "asc" | "desc";
+  sortBy?: 'relevance' | 'recent' | 'popular' | 'reputation';
+  sortOrder?: 'asc' | 'desc';
 }
 
-export interface MessageSearchFilters {
+export interface IMessageSearchFilters {
   sender?: Address;
   recipient?: Address;
   messageType?: MessageType | MessageType[];
@@ -455,11 +456,11 @@ export interface MessageSearchFilters {
   content?: string;
   dateFrom?: number;
   dateTo?: number;
-  sortBy?: "relevance" | "recent";
-  sortOrder?: "asc" | "desc";
+  sortBy?: 'relevance' | 'recent';
+  sortOrder?: 'asc' | 'desc';
 }
 
-export interface ChannelSearchFilters {
+export interface IChannelSearchFilters {
   creator?: Address;
   visibility?: ChannelVisibility | ChannelVisibility[];
   minMembers?: number;
@@ -474,15 +475,15 @@ export interface ChannelSearchFilters {
   descriptionContains?: string;
   createdAfter?: number;
   createdBefore?: number;
-  sortBy?: "popular" | "recent" | "relevance";
-  sortOrder?: "asc" | "desc";
+  sortBy?: 'popular' | 'recent' | 'relevance';
+  sortOrder?: 'asc' | 'desc';
 }
 
-export interface RecommendationOptions {
+export interface IRecommendationOptions {
   limit?: number;
 }
 
-export interface NetworkStatistics {
+export interface INetworkStatistics {
   totalAgents: number;
   totalMessages: number;
   totalChannels: number;
@@ -493,7 +494,7 @@ export interface NetworkStatistics {
 }
 
 // Migration interfaces
-export interface MigrationStatus {
+export interface IMigrationStatus {
   isComplete: boolean;
   version: string;
   compatibility: string;
@@ -507,12 +508,13 @@ export interface MigrationStatus {
   error?: string;
 }
 
-export interface V2FeatureMap {
-  [key: string]: {
+export type V2FeatureMap = Record<
+  string,
+  {
     available: boolean;
     description: string;
-  };
-}
+  }
+>;
 
 // Re-export common types
-export { Address, KeyPairSigner };
+export type { Address, KeyPairSigner };

@@ -87,24 +87,28 @@ tests/
 ## 🧪 Test Categories
 
 ### Core Protocol Tests
+
 - **Agent Registration**: Test agent creation and management
 - **Message Handling**: Validate message sending and receiving
 - **Channel Operations**: Test channel creation and participation
 - **Escrow Functions**: Verify escrow deposits and withdrawals
 
 ### Security Tests
+
 - **Input Validation**: Comprehensive input sanitization tests
 - **Cryptographic Verification**: Ed25519 signature validation
 - **Rate Limiting**: Anti-spam and DoS protection tests
 - **PDA Security**: Program Derived Address validation
 
 ### Performance Tests
+
 - **Throughput Benchmarks**: Message processing speed tests
 - **Compression Efficiency**: ZK compression ratio validation
 - **Memory Usage**: Resource consumption monitoring
 - **Concurrent Operations**: Multi-threaded operation tests
 
 ### Integration Tests
+
 - **IPFS Integration**: Metadata storage and retrieval
 - **ZK Compression**: Light Protocol compression tests
 - **Multi-Agent Scenarios**: Complex interaction patterns
@@ -147,6 +151,7 @@ solana airdrop 5 ~/.config/solana/test-keypair.json --url devnet
 ## 🎯 Running Specific Test Suites
 
 ### Security Tests
+
 ```bash
 # Run all security tests
 bun test security-audit.test.ts comprehensive-security.test.ts input-validation.test.ts
@@ -156,6 +161,7 @@ bun test --reporter=security --output-file=security-report.json
 ```
 
 ### Performance Tests
+
 ```bash
 # Run performance benchmarks
 bun test performance-benchmark.test.ts
@@ -165,6 +171,7 @@ bun test --profile --benchmark-iterations=100
 ```
 
 ### ZK Compression Tests
+
 ```bash
 # Test compression functionality
 bun test compression-proof.test.ts
@@ -176,6 +183,7 @@ COMPRESSION_LEVEL=max bun test compression-proof.test.ts
 ## 🔍 Test Data & Fixtures
 
 ### Agent Test Data
+
 ```typescript
 export const TEST_AGENTS = {
   basicAgent: {
@@ -190,6 +198,7 @@ export const TEST_AGENTS = {
 ```
 
 ### Message Test Data
+
 ```typescript
 export const TEST_MESSAGES = {
   simple: "Hello from test suite!",
@@ -202,6 +211,7 @@ export const TEST_MESSAGES = {
 ## 📊 Coverage Reports
 
 ### Generating Coverage
+
 ```bash
 # Generate HTML coverage report
 bun test --coverage --coverage-reporter=html
@@ -214,6 +224,7 @@ curl -s https://codecov.io/bash | bash
 ```
 
 ### Coverage Targets
+
 - **Core Protocol**: >90%
 - **Security Functions**: >95%
 - **Error Handling**: >85%
@@ -222,6 +233,7 @@ curl -s https://codecov.io/bash | bash
 ## 🚨 Continuous Integration
 
 ### GitHub Actions Integration
+
 ```yaml
 # .github/workflows/test.yml
 name: Tests
@@ -238,6 +250,7 @@ jobs:
 ```
 
 ### Test Matrix
+
 - **Networks**: devnet, testnet, localnet
 - **Node Versions**: 18.x, 20.x, 21.x
 - **Operating Systems**: ubuntu-latest, macos-latest
@@ -248,12 +261,14 @@ jobs:
 ### Common Issues
 
 1. **Connection Timeouts**
+
    ```bash
    # Increase timeout
    export ANCHOR_TEST_TIMEOUT=120000
    ```
 
 2. **Insufficient Funds**
+
    ```bash
    # Check balance
    solana balance --url devnet
@@ -263,6 +278,7 @@ jobs:
    ```
 
 3. **Program Not Found**
+
    ```bash
    # Verify program deployment
    anchor build
@@ -270,6 +286,7 @@ jobs:
    ```
 
 ### Test Debugging Tools
+
 ```bash
 # Run with debug logging
 DEBUG=* bun test
@@ -284,12 +301,14 @@ solana logs --url devnet
 ## 📈 Performance Benchmarks
 
 ### Current Benchmarks (Devnet)
+
 - **Agent Registration**: ~2-3 seconds
 - **Message Sending**: ~1-2 seconds
 - **Channel Creation**: ~3-4 seconds
 - **ZK Compression**: ~500ms overhead
 
 ### Load Testing
+
 ```bash
 # Run load tests
 bun test performance-benchmark.test.ts --load-test
@@ -301,6 +320,7 @@ AGENT_COUNT=100 bun test --stress
 ## 🔐 Security Testing
 
 ### Automated Security Scans
+
 ```bash
 # Run security audit
 bun audit
@@ -313,6 +333,7 @@ cargo audit
 ```
 
 ### Manual Security Tests
+
 - SQL injection simulation
 - Buffer overflow protection
 - Cryptographic algorithm validation
@@ -327,6 +348,7 @@ cargo audit
 ## 🤝 Contributing
 
 ### Writing New Tests
+
 1. Follow the existing test structure
 2. Use descriptive test names
 3. Include both positive and negative test cases
@@ -334,6 +356,7 @@ cargo audit
 5. Ensure tests are deterministic and isolated
 
 ### Test Standards
+
 - Tests must pass on all supported networks
 - Coverage must not decrease
 - Performance tests must meet benchmarks

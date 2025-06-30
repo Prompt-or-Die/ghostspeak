@@ -20,8 +20,8 @@ import {
   MessageStatus,
   ChannelVisibility,
   AGENT_CAPABILITIES
-} from '../src/index.js';
-import { Connection, PublicKey } from '@solana/web3.js';
+} from '../src/index.js.js';
+import { address } from '@solana/web3.js';
 
 describe('PoD Protocol JavaScript SDK Feature Parity', () => {
   let client;
@@ -29,7 +29,7 @@ describe('PoD Protocol JavaScript SDK Feature Parity', () => {
   beforeEach(() => {
     client = new PodComClient({
       endpoint: 'http://localhost:8899',
-      programId: new PublicKey('11111111111111111111111111111111'),
+      programId: address('11111111111111111111111111111112'),
       commitment: 'confirmed'
     });
   });
@@ -48,7 +48,8 @@ describe('PoD Protocol JavaScript SDK Feature Parity', () => {
   });
 
   it('should export all constants', () => {
-    expect(PROGRAM_ID).toBeInstanceOf(PublicKey);
+    // In Web3.js v2, addresses are branded strings
+    expect(typeof PROGRAM_ID).toBe('string');
     expect(MessageType).toBeDefined();
     expect(MessageStatus).toBeDefined();
     expect(ChannelVisibility).toBeDefined();

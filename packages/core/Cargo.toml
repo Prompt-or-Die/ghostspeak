@@ -25,45 +25,35 @@ cross-chain = []
 defi-integration = []
 
 [dependencies]
-# Core Solana dependencies - latest stable versions for 2025
-anchor-lang = { version = "0.31.1", default-features = false, features = ["init-if-needed"] }
+# Core Solana dependencies - using workspace unified versions (FIXED CONFLICT)
+anchor-lang = { workspace = true }
 
 # Enhanced State Compression with Advanced ZK Features
-spl-account-compression = { version = "1.0.0", features = ["cpi"], default-features = false }
-spl-concurrent-merkle-tree = { version = "1.0.0", default-features = false }
-# New ZK-SNARKs integration for advanced privacy
-# zk-sdk = { version = "0.3.0", optional = true } # Commented out - not available on crates.io
-ark-std = { version = "0.5.0", optional = true }
+spl-account-compression = { workspace = true }
+spl-concurrent-merkle-tree = { workspace = true }
 
 # Enhanced Token Standards for 2025
 spl-token = { version = "8.0.0", features = ["no-entrypoint"], default-features = false }
 spl-token-2022 = { version = "9.0.0", features = ["no-entrypoint"], default-features = false }
 spl-associated-token-account = { version = "7.0.0", features = ["no-entrypoint"], default-features = false }
 
-# Advanced DeFi Integration - temporarily commented out due to version conflicts
-# spl-governance = { version = "3.1.1", features = ["no-entrypoint"], optional = true }
+# Error handling - using workspace versions
+thiserror = { workspace = true }
+anyhow = { workspace = true }
 
-# Error handling
-thiserror = "2.0.12"
-anyhow = "1.0.98"
-
-# Enhanced cryptographic operations for 2025 - temporarily commented out due to version conflicts
-# blake3 = { version = "1.5.0", features = ["traits-preview"] }
+# Enhanced cryptographic operations for 2025
+blake3 = { workspace = true }
 bs58 = { version = "0.5.1", default-features = false, features = ["alloc"] }
 sha2 = { version = "0.10.9", default-features = false }
 sha3 = { version = "0.10.8", default-features = false }
-# Quantum-resistant cryptography preparation - temporarily commented out due to version conflicts
-# kyber = { version = "0.1.1", optional = true }
-# dilithium = { version = "0.2.0-alpha.3", optional = true }
 
 # AI Agent Integration
 borsh = { version = "1.5.7", default-features = false }
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { workspace = true }
 serde_json = { version = "1.0.140", default-features = false, features = ["alloc"] }
 
 # Enhanced utilities for 2025
 bytemuck = { version = "1.23.1", features = ["derive"] }
-# solana-program-test = { version = "2.1.0", optional = true }
 log = "0.4.27"
 
 # Cross-chain compatibility - temporarily commented out due to version conflicts

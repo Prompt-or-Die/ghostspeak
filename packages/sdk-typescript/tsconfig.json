@@ -1,15 +1,16 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "ESNext",
-    "lib": ["ES2020", "DOM"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": false,
+    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "declaration": true,
@@ -19,7 +20,19 @@
     "emitDecoratorMetadata": true,
     "noErrorTruncation": false,
     "composite": true,
-    "noImplicitAny": false
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "noImplicitAny": true,
+    "isolatedModules": true,
+    "preserveConstEnums": true,
+    "types": ["node", "bun"],
+    "baseUrl": "../../",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@services/*": ["./src/services/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@types/*": ["./src/types/*"],
+      "@generated/*": ["./src/generated/*"]
+    }
   },
   "include": [
     "src/**/*",
@@ -29,6 +42,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

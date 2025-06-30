@@ -1,109 +1,35 @@
 /**
- * PoD Protocol SDK - TypeScript SDK for PoD Protocol (Prompt or Die)
+ * podAI Protocol SDK - Web3.js v2.0 Native Implementation
  *
- * This SDK provides a complete interface for interacting with the PoD Protocol
- * on Solana, enabling AI agents to register, communicate, and transact with each other.
+ * Modern TypeScript SDK for podAI Protocol on Solana
+ * Uses Codama-generated clients for maximum performance and type safety
  */
 
-// Core client
-export { PodComClient } from "./client";
-
-// Web3.js v2.0 Generated Clients (Codama)
-export * from "./generated";
-
-// Services
-export { AgentService } from "./services/agent";
-export { MessageService } from "./services/message";
-export { ChannelService } from "./services/channel";
-export { EscrowService } from "./services/escrow";
-export { AnalyticsService } from "./services/analytics";
-export { DiscoveryService } from "./services/discovery";
-export { IPFSService } from "./services/ipfs";
-export { ZKCompressionService } from "./services/zk-compression";
-
-// Service types
-export type {
-  AgentAnalytics,
-  MessageAnalytics,
-  ChannelAnalytics,
-  NetworkAnalytics,
-  DashboardData,
-} from "./services/analytics";
-
-export type {
-  SearchFilters,
-  SearchResult,
-  RecommendationOptions,
-  Recommendation,
-} from "./services/discovery";
-
-export type {
-  IPFSConfig,
-  ChannelMessageContent,
-  ParticipantExtendedMetadata,
-  IPFSStorageResult,
-} from "./services/ipfs";
-
-export type {
-  ZKCompressionConfig,
-  CompressedChannelMessage,
-  CompressedChannelParticipant,
-  BatchSyncOperation,
-} from "./services/zk-compression";
-
-// Types and interfaces
+// Web3.js v2.0 Client (Production Ready)
 export {
-  PROGRAM_ID,
-  MessageType,
-  MessageStatus,
-  ChannelVisibility,
-  AGENT_CAPABILITIES,
-  PodComError,
-  ErrorCode,
-} from "./types";
-
-export type {
-  AgentAccount,
-  MessageAccount,
-  ChannelAccount,
-  EscrowAccount,
-  PodComConfig,
-  CreateAgentOptions,
-  UpdateAgentOptions,
-  SendMessageOptions,
-  CreateChannelOptions,
-  DepositEscrowOptions,
-  WithdrawEscrowOptions,
-  AgentSearchFilters,
-  MessageSearchFilters,
-  ChannelSearchFilters,
-  NetworkStatistics,
-} from "./types";
-
-// Utility functions
-export {
-  findAgentPDA,
-  findMessagePDA,
-  findChannelPDA,
-  findEscrowPDA,
-  findParticipantPDA,
-  findInvitationPDA,
-  findChannelMessagePDA,
-  getMessageTypeId,
-  getMessageTypeFromId,
-  hashPayload,
-  hasCapability,
-  addCapability,
-  removeCapability,
-  getCapabilityNames,
-  lamportsToSol,
-  solToLamports,
+  PodAIClientV2,
+  createPodAIClientV2,
+  createDevnetClient,
+  createMainnetClient,
   isValidAddress,
-  sleep,
-  retry,
-} from "./utils";
+  type IPodAIClientV2Config,
+} from './client-v2';
 
-// Re-export commonly used Solana types for convenience from Web3.js v2.0
-export type { Address } from '@solana/addresses';
-export type { Rpc } from '@solana/kit';
-export type { KeyPairSigner } from "@solana/signers";
+// Types and Interfaces
+export type {
+  // Core types from types.ts
+  IAgentAccount,
+  ICreateAgentOptions,
+} from './types';
+
+// Re-export generated v2 types for advanced usage
+export * from './generated-v2';
+
+// Constants
+export const PODAI_PROGRAM_ID = 'HEpGLgYsE1kP8aoYKyLFc3JVVrofS7T4zEA6fWBJsZps';
+export const DEVNET_RPC = 'https://api.devnet.solana.com';
+export const MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
+
+// Version info
+export const VERSION = '2.0.0';
+export const SDK_NAME = 'podai-sdk';

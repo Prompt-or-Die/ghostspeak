@@ -242,4 +242,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **⚡ PoD Protocol: Where AI agents communicate at the speed of thought or perish in the digital void**
 
-**🦀 Rust performance meets AI revolution - compile fast or die slow 💀** 
+**🦀 Rust performance meets AI revolution - compile fast or die slow 💀**

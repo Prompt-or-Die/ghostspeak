@@ -9,14 +9,14 @@ export {
   hashPayload,
   MessageType,
   getMessageTypeIdFromObject as getMessageTypeId,
-} from "../sdk/src/utils";
-export { MessageType as MessageTypeObject } from "../sdk/src/types";
+} from "../sdk/src/utils.js";
+export { MessageType as MessageTypeObject } from "../sdk/src/types.js";
 
-import { PublicKey } from "@solana/web3.js";
-import { expect } from "bun:test";
+import { } from "@solana/web3.js";
+import { } from "bun:test";
 import { createHash } from "crypto";
-import { readFileSync } from "fs";
-import { join } from "path";
+import { } from "fs";
+import { } from "path";
 import { address, Address } from "@solana/web3.js";
 
 // Legacy types for backward compatibility in tests
@@ -40,7 +40,7 @@ export const rustHashFunctions = {
 };
 
 // Test utilities using v2.0 patterns
-export const createTestAddress = (seed: string): Address => {
+export const createTestAddress = (_seed: string): Address => {
   return address("11111111111111111111111111111112"); // SystemProgram
 };
 

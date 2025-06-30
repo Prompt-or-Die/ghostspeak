@@ -1,0 +1,181 @@
+﻿import { 
+  createSolanaRpc, 
+  generateKeyPairSigner, 
+  address, 
+  type KeyPairSigner, 
+  type Address
+} from '@solana/web3.js';
+
+export interface TestConfig {
+  rpc: ReturnType<typeof createSolanaRpc>;
+  payerSigner: KeyPairSigner;
+  programId: Address;
+  network: 'devnet' | 'testnet' | 'localnet';
+}
+
+export interface TestEnvironmentData {
+  payer: KeyPairSigner;
+  testAgents: KeyPairSigner[];
+  testChannels: Address[];
+}
+
+export interface TestEnvironment {
+  config: TestConfig;
+  rpc: ReturnType<typeof createSolanaRpc>;
+  data: TestEnvironmentData;
+}
+
+export async function createTestConfig(): Promise<TestConfig> {
+  const rpc = createSolanaRpc('http://127.0.0.1:8899');
+  const payerSigner = await generateKeyPairSigner();
+  const programId = address('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS');
+  
+  return {
+    rpc,
+    payerSigner,
+    programId,
+    network: 'localnet'
+  };
+}
+
+/**
+ * Test environment management for Web3.js v2
+ */
+export class TestEnvironmentManager {
+  /**
+   * Setup a complete test environment with RPC and test data
+   */
+  static async setupTestEnvironment(): Promise<TestEnvironment> {
+    const config = await createTestConfig();
+    
+    // Test RPC connection
+    try {
+      const slot = await config.rpc.getSlot().send();
+      console.log(Connected to test network at slot: );
+    } catch (error) {
+      throw new Error(Failed to connect to test RPC: error: script "validate" exited with code 1 error: script "validate:comprehensive" exited with code 1 $ concurrently "bun run validate:config" "bun run validate:types" "bun run validate:security" $ bun run validate:comprehensive The term 'head' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. error: script "validate" exited with code 1 error: script "validate:comprehensive" exited with code 1 $ concurrently "bun run validate:config" "bun run validate:types" "bun run validate:security" $ bun run validate:comprehensive The term 'grep' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:1 char:10
++ cd ..\.. && bun run validate:typescript
++          ~~
+The token '&&' is not a valid statement separator in this version.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:28
++ cd packages\sdk-typescript && rm -rf node_modules\.cache 2>$null; rm  ...
++                            ~~
+The token '&&' is not a valid statement separator in this version.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) A parameter cannot be found that matches parameter name 'la'. An item with the specified name C:\Users\blind\podAI\.cursor\rules already exists. System.Management.Automation.ParseException: At line:1 char:17
++ cd packages/cli && dir src\commands
++                 ~~
+The token '&&' is not a valid statement separator in this version.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) Cannot find path 'C:\Users\blind\podAI\src\commands' because it does not exist. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'.);
+    }
+
+    const data = await this.createTestData();
+    
+    return {
+      config,
+      rpc: config.rpc,
+      data
+    };
+  }
+
+  /**
+   * Create test data with Web3.js v2 patterns
+   */
+  static async createTestData(): Promise<TestEnvironmentData> {
+    const payer = await generateKeyPairSigner();
+    const testAgents = await Promise.all(
+      Array.from({ length: 5 }, () => generateKeyPairSigner())
+    );
+    const testChannels = await Promise.all(
+      Array.from({ length: 3 }, async () => {
+        const signer = await generateKeyPairSigner();
+        return signer.address;
+      })
+    );
+
+    return {
+      payer,
+      testAgents,
+      testChannels
+    };
+  }
+
+  /**
+   * Cleanup test environment
+   */
+  static async cleanup(): Promise<void> {
+    // Web3.js v2 RPC connections don't require explicit cleanup
+    console.log('Test environment cleaned up');
+  }
+
+  /**
+   * Validate test environment health
+   */
+  static async validateEnvironment(env: TestEnvironment): Promise<boolean> {
+    try {
+      // Test basic RPC functionality
+      await env.rpc.getSlot().send();
+      
+      // Validate test data
+      if (!env.data.payer || !env.data.testAgents.length || !env.data.testChannels.length) {
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Environment validation failed:', error);
+      return false;
+    }
+  }
+}
+
+/**
+ * Configuration defaults for different test scenarios
+ */
+export const TEST_CONFIGS = {
+  unit: {
+    network: 'localnet' as const,
+    rpcUrl: 'http://127.0.0.1:8899',
+    timeout: 5000
+  },
+  integration: {
+    network: 'devnet' as const,
+    rpcUrl: 'https://api.devnet.solana.com',
+    timeout: 30000
+  },
+  e2e: {
+    network: 'devnet' as const,
+    rpcUrl: 'https://api.devnet.solana.com',
+    timeout: 60000
+  }
+};
+
+/**
+ * Helper utilities for test configuration
+ */
+export class TestConfigUtils {
+  static async createMinimalConfig(): Promise<TestConfig> {
+    return createTestConfig();
+  }
+
+  static async createConfigForNetwork(network: 'devnet' | 'testnet' | 'localnet'): Promise<TestConfig> {
+    const rpcUrls = {
+      localnet: 'http://127.0.0.1:8899',
+      devnet: 'https://api.devnet.solana.com',
+      testnet: 'https://api.testnet.solana.com'
+    };
+
+    const rpc = createSolanaRpc(rpcUrls[network]);
+    const payerSigner = await generateKeyPairSigner();
+    const programId = address('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS');
+
+    return {
+      rpc,
+      payerSigner,
+      programId,
+      network
+    };
+  }
+}

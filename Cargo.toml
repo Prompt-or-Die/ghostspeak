@@ -6,11 +6,24 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
+# Anchor framework - production stable 2025
 anchor-lang = { version = "0.31.1", default-features = false, features = ["init-if-needed"] }
 anchor-spl = "0.31.1"
+
+# SPL and compression - aligned versions
 spl-account-compression = { version = "1.0.0", features = ["cpi"], default-features = false }
-solana-program = "2.3.0"
+spl-concurrent-merkle-tree = "1.0.0"
+
+# Solana ecosystem - UNIFIED VERSION STRATEGY (2025 stable)
+solana-program = "2.1.13"
+solana-sdk = "2.1.13" 
+solana-client = "2.1.13"
+solana-transaction-status = "2.1.13"
+
+# Cryptography
 blake3 = "1.5.0"
+
+# Async and utilities
 tokio = { version = "1.45.1", features = ["full"] }
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"

@@ -162,6 +162,7 @@ pub async fn register_agent_secure(
 ### Validation Rules
 
 #### Metadata URI Validation
+
 ```rust
 impl Validator {
     pub fn validate_metadata_uri(uri: &str) -> Result<(), ValidationError> {
@@ -191,6 +192,7 @@ impl Validator {
 ```
 
 #### Message Content Validation
+
 ```rust
 impl Validator {
     pub fn validate_message_content(content: &str) -> Result<(), ValidationError> {
@@ -589,4 +591,4 @@ monitor.on_threat_detected(|threat| async move {
 });
 ```
 
-This security guide provides comprehensive protection for applications using the PoD Protocol Rust SDK, ensuring that sensitive data and operations are properly secured against common attack vectors. 
+This security guide provides comprehensive protection for applications using the PoD Protocol Rust SDK, ensuring that sensitive data and operations are properly secured against common attack vectors.

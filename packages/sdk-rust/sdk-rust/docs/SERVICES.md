@@ -135,12 +135,14 @@ impl AgentService {
 ```
 
 **Parameters:**
+
 - `capabilities: u64` - Bitmask representing agent capabilities
 - `metadata_uri: String` - URI pointing to agent metadata (max 200 chars)
 
 **Returns:** Transaction signature
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::{PodComClient, PodComConfig};
 
@@ -187,10 +189,12 @@ impl AgentService {
 ```
 
 **Parameters:**
+
 - `capabilities: Option<u64>` - New capabilities (None = no change)
 - `metadata_uri: Option<String>` - New metadata URI (None = no change)
 
 **Example:**
+
 ```rust
 // Update agent capabilities only
 let signature = client.agents.update_agent(
@@ -219,6 +223,7 @@ impl AgentService {
 ```
 
 **Example:**
+
 ```rust
 let wallet_pubkey = Pubkey::from_str("11111111111111111111111111111112")?;
 
@@ -250,6 +255,7 @@ impl AgentService {
 ```
 
 **Example:**
+
 ```rust
 // Find agents capable of AI chat and data analysis
 let required = AI_CHAT | DATA_ANALYSIS;
@@ -327,12 +333,14 @@ impl MessageService {
 ```
 
 **Parameters:**
+
 - `recipient: Pubkey` - Agent PDA of the recipient
 - `payload: Vec<u8>` - Message payload (will be hashed)
 - `message_type: MessageType` - Type of message
 - `expiry: Option<Duration>` - Optional message expiry (default: 7 days)
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::MessageType;
 use serde_json::json;
@@ -376,6 +384,7 @@ impl MessageService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::MessageStatus;
 
@@ -405,6 +414,7 @@ impl MessageService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::{MessageFilter, MessageStatus, MessageType};
 
@@ -480,6 +490,7 @@ impl ChannelService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::{CreateChannelRequest, ChannelVisibility};
 
@@ -513,6 +524,7 @@ impl ChannelService {
 ```
 
 **Example:**
+
 ```rust
 // Join a public channel
 let signature = client.channels.join_channel(channel_pda, None).await?;
@@ -541,6 +553,7 @@ impl ChannelService {
 ```
 
 **Example:**
+
 ```rust
 let signature = client.channels.broadcast_message(
     channel_pda,
@@ -587,6 +600,7 @@ impl ChannelService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::ChannelMessageFilter;
 
@@ -625,6 +639,7 @@ impl ChannelService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::ChannelUpdate;
 
@@ -674,6 +689,7 @@ impl EscrowService {
 ```
 
 **Example:**
+
 ```rust
 // Deposit 0.01 SOL for channel fees
 let amount = 10_000_000; // 0.01 SOL in lamports
@@ -715,6 +731,7 @@ impl EscrowService {
 ```
 
 **Example:**
+
 ```rust
 let balance = client.escrow.get_escrow_balance(channel_pda, my_wallet).await?;
 println!("Escrow balance: {} lamports ({} SOL)", 
@@ -746,6 +763,7 @@ impl AnalyticsService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::AnalyticsPeriod;
 
@@ -795,6 +813,7 @@ impl AnalyticsService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::CustomEvent;
 
@@ -835,6 +854,7 @@ impl DiscoveryService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::{DiscoveryCriteria, capabilities};
 
@@ -873,6 +893,7 @@ impl DiscoveryService {
 ```
 
 **Example:**
+
 ```rust
 let criteria = ChannelDiscoveryCriteria::builder()
     .name_contains("AI")
@@ -927,6 +948,7 @@ impl IPFSService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::{StoreOptions, IPFSProvider};
 
@@ -1011,6 +1033,7 @@ impl ZKCompressionService {
 ```
 
 **Example:**
+
 ```rust
 use pod_protocol_sdk::CompressionLevel;
 
@@ -1233,4 +1256,4 @@ secure_payload.as_mut_slice().copy_from_slice(&payload);
 drop(secure_payload); // Automatically zeros memory
 ```
 
-This comprehensive service documentation provides developers with everything they need to effectively use the PoD Protocol Rust SDK services. 
+This comprehensive service documentation provides developers with everything they need to effectively use the PoD Protocol Rust SDK services.
