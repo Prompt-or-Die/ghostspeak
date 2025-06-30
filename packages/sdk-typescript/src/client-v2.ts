@@ -19,6 +19,9 @@ import {
 } from './generated-v2/accounts/agentAccount.js';
 // Import services
 import { AgentService } from './services/agent.js';
+import { ChannelService } from './services/channel.js';
+import { MessageService } from './services/message.js';
+import { AnalyticsService } from './services/analytics.js';
 
 // Types from our existing system (only what we need)
 import type { ICreateAgentOptions } from './types.js';
@@ -32,6 +35,7 @@ import type { KeyPairSigner } from '@solana/signers';
  */
 export interface IPodAIClientV2Config {
   rpcEndpoint: string;
+  wsEndpoint?: string; // Optional WebSocket endpoint for subscriptions
   commitment?: Commitment;
   programId?: string;
 }
@@ -44,9 +48,13 @@ export class PodAIClientV2 {
   private readonly rpc: Rpc<SolanaRpcApi>;
   private readonly programId: Address;
   private readonly commitment: Commitment;
+  private readonly wsEndpoint?: string;
 
   // Services
   public readonly agents: AgentService;
+  public readonly channels: ChannelService;
+  public readonly messages: MessageService;
+  public readonly analytics: AnalyticsService;
 
   constructor(config: IPodAIClientV2Config) {
     this.rpc = createSolanaRpc(config.rpcEndpoint);
@@ -54,9 +62,33 @@ export class PodAIClientV2 {
       config.programId ?? 'HEpGLgYsE1kP8aoYKyLFc3JVVrofS7T4zEA6fWBJsZps'
     );
     this.commitment = config.commitment ?? 'confirmed';
+    this.wsEndpoint = config.wsEndpoint ?? undefined;
 
     // Initialize services
-    this.agents = new AgentService(this.rpc, this.programId, this.commitment);
+    this.agents = new AgentService(
+      this.rpc, 
+      this.programId, 
+      this.commitment, 
+      this.wsEndpoint
+    );
+    
+    this.channels = new ChannelService(
+      this.rpc,
+      this.programId,
+      this.commitment
+    );
+    
+    this.messages = new MessageService(
+      this.rpc,
+      this.programId,
+      this.commitment
+    );
+    
+    this.analytics = new AnalyticsService(
+      this.rpc,
+      this.programId,
+      this.commitment
+    );
   }
 
   /**
@@ -71,6 +103,13 @@ export class PodAIClientV2 {
    */
   public getProgramId(): Address {
     return this.programId;
+  }
+
+  /**
+   * Get the WebSocket endpoint
+   */
+  public getWsEndpoint(): string | undefined {
+    return this.wsEndpoint;
   }
 
   /**

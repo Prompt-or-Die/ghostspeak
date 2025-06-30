@@ -1,11 +1,11 @@
 {
   "name": "@podai/sdk",
   "version": "2.0.4",
-  "description": "TypeScript SDK for podAI Protocol - AI agent communication on Solana",
+  "description": "TypeScript SDK for podAI Protocol on Solana",
   "type": "module",
-  "preferredPackageManager": "bun",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.esm.js",
@@ -13,136 +13,56 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "bun build src/index.ts --outdir=dist --target=node --format=esm --outfile=index.esm.js && bun build src/index.ts --outdir=dist --target=node --format=cjs --outfile=index.js && tsc --emitDeclarationOnly --declaration --outDir dist",
-    "build:watch": "bun --watch build",
-    "build:dev": "bun build src/index.ts --outdir=dist --target=node --format=esm --sourcemap",
-    "build:prod": "bun build src/index.ts --outdir=dist --target=node --format=esm --minify && bun build src/index.ts --outdir=dist --target=node --format=cjs --minify && tsc --emitDeclarationOnly --declaration --outDir dist",
-    "build:clean": "rimraf dist && bun run build",
-    "dev": "bun run build:watch",
-    "generate:codama": "node scripts/codama-generate.mjs",
-    "generate:clean": "rimraf src/generated-v2 && bun run generate:codama",
-    "type-check": "tsc --noEmit",
-    "type-check:watch": "tsc --noEmit --watch",
-    "lint": "eslint src --ext .ts,.js --fix",
-    "lint:check": "eslint src --ext .ts,.js",
-    "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,js,json,md}\"",
+    "build": "bun build src/index.ts --outdir=dist --target=node --format=esm --outfile=index.esm.js && bun build src/index.ts --outdir=dist --target=node --format=cjs --outfile=index.js",
+    "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
+    "codama": "node scripts/codama-generate.mjs",
+    "generate": "npm run codama",
+    "dev": "bun --watch src/index.ts",
     "test": "bun test",
-    "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage",
-    "test:e2e": "bun test tests/e2e/",
-    "docs": "typedoc src/index.ts",
-    "docs:serve": "typedoc src/index.ts --watch --serve",
-    "validate": "bun run lint:check && bun run type-check && bun run test",
-    "validate:full": "bun run format:check && bun run lint:check && bun run type-check && bun run test:coverage",
-    "health": "bun -e \"import('./src/client-v2.ts').then(m => { const c = m.createPodAIClientV2({rpcEndpoint: 'https://api.devnet.solana.com'}); return c.healthCheck(); }).then(console.log).catch(console.error)\"",
-    "deps:check": "bun outdated",
-    "deps:update": "bun update && bun run validate",
-    "publish:npm": "npm publish",
-    "release:patch": "npm version patch && bun run build:prod && npm publish",
-    "release:minor": "npm version minor && bun run build:prod && npm publish",
-    "release:major": "npm version major && bun run build:prod && npm publish",
-    "clean": "rimraf dist node_modules/.cache coverage",
-    "fresh": "bun run clean && bun install && bun run build",
-    "security": "bun audit"
+    "lint": "eslint src/**/*.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solana/addresses": "2.1.1",
+    "@solana/rpc": "2.1.1",
+    "@solana/rpc-types": "2.1.1",
+    "@solana/signers": "2.1.1",
+    "@solana/codecs": "2.1.1",
+    "@solana/kit": "0.1.7",
+    "@codama/renderers-js": "^1.0.0",
+    "@codama/nodes-from-anchor": "^1.0.0",
+    "codama": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.7",
+    "typescript": "^5.0.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "bun-types": "^1.1.34"
+  },
+  "peerDependencies": {
+    "@solana/web3.js": "^2.0.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
   },
   "keywords": [
     "solana",
-    "web3",
-    "sdk",
-    "ai-agents",
+    "blockchain",
+    "ai",
+    "agents",
+    "podai",
     "protocol",
     "typescript",
-    "blockchain",
-    "podAI",
-    "podAIprotocol"
+    "sdk"
   ],
-  "author": "podAI Team",
-  "license": "MIT",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "dependencies": {
-    "@coral-xyz/anchor": "0.31.1",
-    "@solana/rpc": "2.1.1",
-    "@solana/rpc-subscriptions": "2.1.1",
-    "@solana/addresses": "2.1.1",
-    "@solana/signers": "2.1.1",
-    "@solana/transactions": "2.1.1",
-    "@solana/accounts": "2.1.1",
-    "@solana/codecs": "2.1.1",
-    "@solana/transaction-messages": "2.1.1",
-    "@solana/sysvars": "2.1.1",
-    "@solana/errors": "2.1.1",
-    "@lightprotocol/stateless.js": "^0.22.0",
-    "@lightprotocol/compressed-token": "^0.22.0",
-    "keccak": "^3.0.4"
-  },
-  "peerDependencies": {
-    "@solana-program/compute-budget": "0.8.0",
-    "@solana-program/system": "0.7.0",
-    "@solana-program/token": "0.5.1"
-  },
-  "optionalDependencies": {
-    "helia": "^5.4.2",
-    "@helia/unixfs": "^5.0.3",
-    "@helia/json": "^4.0.6"
-  },
-  "devDependencies": {
-    "@types/node": "24.0.4",
-    "@typescript-eslint/eslint-plugin": "8.35.0",
-    "@typescript-eslint/parser": "8.35.0",
-    "eslint": "9.29.0",
-    "eslint-config-prettier": "10.1.5",
-    "eslint-plugin-prettier": "5.5.1",
-    "prettier": "3.6.1",
-    "rimraf": "6.0.1",
-    "typedoc": "0.28.5",
-    "typescript": "5.8.3"
-  },
-  "eslintConfig": {
-    "extends": [
-      "@typescript-eslint/recommended",
-      "prettier"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "plugins": [
-      "@typescript-eslint",
-      "prettier"
-    ],
-    "rules": {
-      "prettier/prettier": "error",
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          "argsIgnorePattern": "^_",
-          "varsIgnorePattern": "^_"
-        }
-      ],
-      "no-unused-vars": [
-        "error",
-        {
-          "argsIgnorePattern": "^_",
-          "varsIgnorePattern": "^_"
-        }
-      ]
-    },
-    "ignorePatterns": [
-      "dist",
-      "node_modules",
-      "src/generated"
-    ]
-  },
-  "prettier": {
-    "semi": true,
-    "trailingComma": "es5",
-    "singleQuote": true,
-    "printWidth": 80,
-    "tabWidth": 2
-  }
+  "author": "PodAI Team",
+  "license": "MIT"
 }

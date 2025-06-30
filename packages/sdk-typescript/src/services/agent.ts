@@ -8,6 +8,19 @@ import type { Rpc, SolanaRpcApi } from '@solana/rpc';
 import type { KeyPairSigner, TransactionSigner } from '@solana/signers';
 import type { Commitment } from '@solana/rpc-types';
 
+// Import @solana/kit transaction functionality
+import { 
+  pipe,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstructions,
+  signTransactionMessageWithSigners,
+  getSignatureFromTransaction,
+  sendAndConfirmTransactionFactory,
+  createSolanaRpcSubscriptions
+} from '@solana/kit';
+
 // Import Codama-generated functionality
 import { getRegisterAgentInstructionAsync } from '../generated-v2/instructions/registerAgent.js';
 import { 
@@ -24,7 +37,8 @@ export class AgentService {
   constructor(
     private readonly rpc: Rpc<SolanaRpcApi>,
     private readonly programId: Address,
-    private readonly commitment: Commitment = 'confirmed'
+    private readonly commitment: Commitment = 'confirmed',
+    private readonly wsEndpoint?: string
   ) {}
 
   /**
@@ -45,10 +59,43 @@ export class AgentService {
         metadataUri: options.metadataUri,
       }, { programAddress: this.programId });
 
-      // For now, return the instruction data as a mock signature
-      // This will be replaced with real transaction sending
-      console.log('Would send instruction:', instruction);
-      return `mock_signature_${Date.now()}`;
+      console.log('✅ Instruction created successfully');
+
+      // Get the latest blockhash for transaction lifetime
+      const { value: latestBlockhash } = await this.rpc.getLatestBlockhash().send();
+
+      // Create WebSocket URL from RPC URL or use provided wsEndpoint
+      const wsUrl = this.wsEndpoint || 'wss://api.devnet.solana.com';
+      const rpcSubscriptions = createSolanaRpcSubscriptions(wsUrl);
+
+      // Create the send and confirm transaction factory
+      const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({ 
+        rpc: this.rpc, 
+        rpcSubscriptions 
+      });
+
+      // Build the transaction using the pipe pattern
+      const transaction = pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayerSigner(signer, tx),
+        (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+        (tx) => appendTransactionMessageInstructions([instruction], tx)
+      );
+
+      // Sign the transaction
+      const signedTransaction = await signTransactionMessageWithSigners(transaction);
+
+      // Send and confirm the transaction
+      await sendAndConfirmTransaction(signedTransaction, {
+        commitment: this.commitment,
+        skipPreflight: false
+      });
+
+      // Get the transaction signature
+      const signature = getSignatureFromTransaction(signedTransaction);
+      
+      console.log('✅ Agent registration transaction confirmed:', signature);
+      return signature;
 
     } catch (error) {
       console.error('Failed to register agent:', error);
@@ -134,8 +181,8 @@ export class AgentService {
    * @returns Promise resolving to array of matching agents
    */
   async findAgentsByCapability(
-    capability: number, 
-    limit: number = 10
+    _capability: number, 
+    _limit: number = 10
   ): Promise<IAgentAccount[]> {
     try {
       // Note: This would require indexing in a production system
