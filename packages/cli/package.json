@@ -41,7 +41,8 @@
     "@solana/rpc-types": "2.1.1",
     "@solana/signers": "2.1.1",
     "@solana/codecs": "2.1.1",
-    "bs58": "^6.0.0"
+    "bs58": "^6.0.0",
+    "@podai/sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.0.7",

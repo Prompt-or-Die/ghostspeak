@@ -12,12 +12,13 @@ import { address } from '@solana/addresses';
 import { createSolanaRpc } from '@solana/rpc';
 import { generateKeyPairSigner } from '@solana/signers';
 
-// Import generated v2 clients from Codama
+// Import Codama-generated functionality
 import {
   fetchMaybeAgentAccount,
   type AgentAccount as CodemaAgentAccount,
 } from './generated-v2/accounts/agentAccount.js';
-import { getRegisterAgentInstructionAsync } from './generated-v2/instructions/registerAgent.js';
+// Import services
+import { AgentService } from './services/agent.js';
 
 // Types from our existing system (only what we need)
 import type { ICreateAgentOptions } from './types.js';
@@ -42,12 +43,20 @@ export interface IPodAIClientV2Config {
 export class PodAIClientV2 {
   private readonly rpc: Rpc<SolanaRpcApi>;
   private readonly programId: Address;
+  private readonly commitment: Commitment;
+
+  // Services
+  public readonly agents: AgentService;
 
   constructor(config: IPodAIClientV2Config) {
     this.rpc = createSolanaRpc(config.rpcEndpoint);
     this.programId = address(
       config.programId ?? 'HEpGLgYsE1kP8aoYKyLFc3JVVrofS7T4zEA6fWBJsZps'
     );
+    this.commitment = config.commitment ?? 'confirmed';
+
+    // Initialize services
+    this.agents = new AgentService(this.rpc, this.programId, this.commitment);
   }
 
   /**
@@ -66,35 +75,24 @@ export class PodAIClientV2 {
 
   /**
    * Create a new agent using Web3.js v2.0 + Codama generated clients
+   * @deprecated Use agents.registerAgent instead
    */
   public async createAgent(
     wallet: KeyPairSigner,
-    _options: ICreateAgentOptions
+    options: ICreateAgentOptions
   ): Promise<string> {
-    try {
-      // Get the register agent instruction with proper signer
-      await getRegisterAgentInstructionAsync({
-        signer: wallet,
-        capabilities: 1,
-        metadataUri: 'https://example.com/metadata',
-      });
-
-      // Return the agent address derived from the wallet
-      return wallet.address;
-    } catch (error) {
-      console.error('Error creating agent:', error);
-      throw new Error(
-        `Failed to create agent: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    console.warn('createAgent is deprecated, use agents.registerAgent instead');
+    return this.agents.registerAgent(wallet, options);
   }
 
   /**
    * Fetch agent account using Web3.js v2.0 + Codama generated clients
+   * @deprecated Use agents.getAgent instead
    */
   public async getAgent(
     agentAddress: Address
   ): Promise<CodemaAgentAccount | null> {
+    console.warn('getAgent is deprecated, use agents.getAgent instead');
     try {
       // Use Codama-generated fetch function
       const maybeAccount = await fetchMaybeAgentAccount(this.rpc, agentAddress);

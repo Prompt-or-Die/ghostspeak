@@ -1,5 +1,5 @@
 {
-  "name": "@podAI/sdk",
+  "name": "@podai/sdk",
   "version": "2.0.4",
   "description": "TypeScript SDK for podAI Protocol - AI agent communication on Solana",
   "type": "module",
