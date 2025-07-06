@@ -603,7 +603,7 @@ pub struct ExtensionMetadata {
     pub repository: String,
     pub license: String,
     pub dependencies: Vec<String>,
-    pub extension_type: ExtensionType,  // Add this field
+    // Removed extension_type field - it's already in Extension struct to avoid duplication
 }
 
 #[account]

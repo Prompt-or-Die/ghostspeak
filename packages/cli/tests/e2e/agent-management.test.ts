@@ -16,7 +16,7 @@ describe('CLI Agent Management E2E Tests', () => {
       const agent = await generateKeyPairSigner();
       
       expect(agent.address).toBeDefined();
-      expect(typeof getAddressEncoder().encode(agent.address)).toBe('string');
+      expect(typeof agent.address).toBe('string');
     });
 
     test('should generate unique agent addresses', async () => {
@@ -26,7 +26,7 @@ describe('CLI Agent Management E2E Tests', () => {
         await generateKeyPairSigner()
       ];
 
-      const addresses = agents.map(a => getAddressEncoder().encode(a.address));
+      const addresses = agents.map(a => a.address);
       const uniqueAddresses = new Set(addresses);
       
       expect(uniqueAddresses.size).toBe(3);
